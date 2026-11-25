@@ -228,8 +228,8 @@
             <span class="toggle-switch"></span>
           </label>
           <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
-            <span>Mode Soirée</span>
-            <input type="checkbox" id="toggle-evening" class="toggle-input sr-only" />
+            <span>Portes intérieures</span>
+            <input type="checkbox" id="toggle-int-doors" class="toggle-input sr-only" checked />
             <span class="toggle-switch"></span>
           </label>
           <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
@@ -237,6 +237,33 @@
             <input type="checkbox" id="toggle-tilegrid" class="toggle-input sr-only" checked />
             <span class="toggle-switch"></span>
           </label>
+
+          <!-- Sélecteur Jour / Nuit -->
+          <div class="pt-2 border-t border-slate-700/60 space-y-1.5">
+            <span class="block text-[11px] font-medium text-slate-300">Ambiance Jour / Nuit</span>
+            <div class="grid grid-cols-2 gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-700/60">
+              <button
+                type="button"
+                data-time="day"
+                class="time-btn flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition bg-amber-500 text-slate-950 shadow-sm"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05L5.636 5.636m12.728 0l-1.414 1.414M7.05 16.95l-1.414 1.414M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Jour
+              </button>
+              <button
+                type="button"
+                data-time="night"
+                class="time-btn flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition text-slate-300 hover:text-white"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                </svg>
+                Nuit
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -384,11 +411,11 @@
     controls.dampingFactor = 0.065;
     controls.maxPolarAngle = Math.PI / 2 - 0.025;
     controls.minDistance = 3.5;
-    controls.maxDistance = 95.0;
+    controls.maxDistance = 145.0;
     controls.target.set(0.0, 1.2, 1.2);
     controls.update();
 
-    // Dôme de ciel dégradé procédural (Jour / Soirée)
+    // Dôme de ciel dégradé procédural (Jour / Nuit)
     const skyUniforms = {
       topColor:    { value: new THREE.Color(0x639cd9) },
       bottomColor: { value: new THREE.Color(0xdbe9f6) },
@@ -424,8 +451,28 @@
     );
     scene.add(skyDome);
 
+    // Champ d'étoiles procédural affiché en mode Nuit
+    const starCount = 650;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(0.15 + Math.random() * 0.85);
+      const r = 148;
+      starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+      starPositions[i * 3 + 1] = r * Math.cos(phi);
+      starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    const starGeom = new THREE.BufferGeometry();
+    starGeom.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const starField = new THREE.Points(
+      starGeom,
+      new THREE.PointsMaterial({ color: 0xeef6ff, size: 0.9, sizeAttenuation: true, transparent: true, opacity: 0.85 })
+    );
+    starField.visible = false;
+    scene.add(starField);
+
     // =========================================================================
-    // 2. ÉCLAIRAGE JOUR / SOIRÉE & LUMIÈRES INTÉRIEURES CHAUDES
+    // 2. ÉCLAIRAGE JOUR / NUIT & LUMIÈRES INTÉRIEURES CHAUDES
     // =========================================================================
     const hemiLight = new THREE.HemisphereLight(0xf3f9ff, 0x76826b, 0.80);
     hemiLight.position.set(0, 48, 0);
@@ -437,50 +484,62 @@
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 2;
-    sunLight.shadow.camera.far = 110;
-    const sBound = 30;
+    sunLight.shadow.camera.far = 120;
+    const sBound = 36;
     sunLight.shadow.camera.left = -sBound;
     sunLight.shadow.camera.right = sBound;
     sunLight.shadow.camera.top = sBound;
     sunLight.shadow.camera.bottom = -sBound;
-    sunLight.shadow.bias = -0.00045;
+    sunLight.shadow.bias = -0.0005;
     sunLight.shadow.normalBias = 0.025;
     scene.add(sunLight);
     scene.add(sunLight.target);
-    sunLight.target.position.set(0, 0, 1);
+    sunLight.target.position.set(0, 0, 0);
 
-    const fillLight = new THREE.DirectionalLight(0xc2dcff, 0.45);
-    fillLight.position.set(-24, 15, -18);
+    const fillLight = new THREE.DirectionalLight(0xcbe2ff, 0.45);
+    fillLight.position.set(-22, 16, -20);
     scene.add(fillLight);
 
-    // Repère plan global : centre la maison autour de (0, 0, 0) dans la scène Three.js
-    const PLAN_OFFSET_X = -12.5;
-    const PLAN_OFFSET_Z = -5.5;
+    // Racine du monde centrant le repère plan autour de (0, 0, 0)
     const worldRoot = new THREE.Group();
-    worldRoot.position.set(PLAN_OFFSET_X, 0, PLAN_OFFSET_Z);
+    worldRoot.position.set(-12.5, 0, -5.5);
     scene.add(worldRoot);
 
-    // Lumières intérieures chaudes (placées en coordonnées plan `(px, y, pz)`)
+    // Lumières intérieures chaudes & éclairage extérieur patio/terrasse (coordonnées plan)
     const warmLights = [];
     [
       [5.4, 2.2, 6.6],   // Pièces de vie
       [11.8, 2.2, 6.5],  // Entrée / Couloir
       [14.1, 2.4, 8.6],  // Patio couvert
       [15.8, 2.2, 2.2],  // Chambre 3
-      [2.2, 2.2, 2.0]    // Chambre 1
+      [2.2, 2.2, 2.0],   // Chambre 1
+      [6.0, 2.1, 11.2]   // Ambiance terrasse façade Sud
     ].forEach(([lx, ly, lz]) => {
-      const pt = new THREE.PointLight(0xffb664, 0.0, 14, 1.8);
+      const pt = new THREE.PointLight(0xffb664, 0.0, 16, 1.7);
       pt.position.set(lx, ly, lz);
       worldRoot.add(pt);
       warmLights.push(pt);
     });
 
-    function setEveningMode(isEvening) {
-      if (!isEvening) {
+    function setDayNightMode(isNight) {
+      document.querySelectorAll('.time-btn').forEach(btn => {
+        const active = (btn.dataset.time === (isNight ? 'night' : 'day'));
+        if (active) {
+          btn.className = isNight
+            ? 'time-btn flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition bg-indigo-500 text-white shadow-sm'
+            : 'time-btn flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-semibold transition bg-amber-500 text-slate-950 shadow-sm';
+        } else {
+          btn.className = 'time-btn flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-medium transition text-slate-300 hover:text-white';
+        }
+      });
+
+      if (!isNight) {
         skyUniforms.topColor.value.setHex(0x639cd9);
         skyUniforms.bottomColor.value.setHex(0xdbe9f6);
         scene.background.setHex(0xc8dff4);
         scene.fog.color.setHex(0xc8dff4);
+        scene.fog.density = 0.0042;
+        starField.visible = false;
         hemiLight.color.setHex(0xf3f9ff);
         hemiLight.groundColor.setHex(0x76826b);
         hemiLight.intensity = 0.80;
@@ -491,19 +550,23 @@
         renderer.toneMappingExposure = 1.06;
         warmLights.forEach(l => { l.intensity = 0; });
       } else {
-        skyUniforms.topColor.value.setHex(0x0b1224);
-        skyUniforms.bottomColor.value.setHex(0x3a2c3e);
-        scene.background.setHex(0x161f36);
-        scene.fog.color.setHex(0x1e263b);
-        hemiLight.color.setHex(0x4a6394);
-        hemiLight.groundColor.setHex(0x221d1a);
-        hemiLight.intensity = 0.45;
-        sunLight.position.set(-26, 9, 18);
-        sunLight.color.setHex(0xff8442);
-        sunLight.intensity = 1.35;
-        fillLight.intensity = 0.22;
-        renderer.toneMappingExposure = 1.12;
-        warmLights.forEach((l, idx) => { l.intensity = idx === 2 ? 3.8 : 2.9; });
+        skyUniforms.topColor.value.setHex(0x030714);
+        skyUniforms.bottomColor.value.setHex(0x0f1c36);
+        scene.background.setHex(0x050a17);
+        scene.fog.color.setHex(0x0b1428);
+        scene.fog.density = 0.0052;
+        starField.visible = true;
+        hemiLight.color.setHex(0x2a4270);
+        hemiLight.groundColor.setHex(0x0e1420);
+        hemiLight.intensity = 0.36;
+        sunLight.position.set(-22, 28, -16);
+        sunLight.color.setHex(0x9bc0ff); // Clair de lune froid
+        sunLight.intensity = 0.58;
+        fillLight.intensity = 0.16;
+        renderer.toneMappingExposure = 1.15;
+        warmLights.forEach((l, idx) => {
+          l.intensity = idx === 2 ? 5.2 : (idx === 5 ? 3.2 : 4.0);
+        });
       }
     }
 
@@ -710,17 +773,18 @@
     // =========================================================================
     // 5. GROUPES HIÉRARCHIQUES & MARQUAGE IMPRESSION 3D
     // =========================================================================
-    const bodyGroup = new THREE.Group();        // Dalle + murs extérieurs + cloisons + cadres (imprimables)
-    const roofGroup = new THREE.Group();        // Toiture 4 pans étanche + gouttières (imprimable séparément)
-    const glassGroup = new THREE.Group();       // Vitrages transparents + vantaux intérieurs visuels (non imprimables)
-    const furnitureGroup = new THREE.Group();   // Mobilier intérieur & véhicule garage (non imprimables)
-    const terraceGroup = new THREE.Group();     // Terrasse 3,60 m travertin 60×60 (imprimable avec terrain)
-    const terraceGridGroup = new THREE.Group(); // Grille 60×60 accentuée toggleable (non imprimable)
-    const terrainGroup = new THREE.Group();     // Socle terrain en pente + cour gravier (imprimable avec terrain)
-    const envGroup = new THREE.Group();         // PAC, clôtures, arbres, boussole Nord (non imprimables)
+    const bodyGroup = new THREE.Group();          // Dalle + murs extérieurs + cloisons + cadres (imprimables)
+    const roofGroup = new THREE.Group();          // Toiture 4 pans étanche + gouttières (imprimable séparément)
+    const glassGroup = new THREE.Group();         // Vitrages transparents (non imprimables)
+    const interiorDoorsGroup = new THREE.Group(); // Vantaux des portes intérieures (toggleable, non imprimable)
+    const furnitureGroup = new THREE.Group();     // Mobilier intérieur & véhicule garage (non imprimables)
+    const terraceGroup = new THREE.Group();       // Terrasse 3,60 m travertin 60×60 (imprimable avec terrain)
+    const terraceGridGroup = new THREE.Group();   // Grille 60×60 accentuée toggleable (non imprimable)
+    const terrainGroup = new THREE.Group();       // Socle terrain parcelles 285/286/93 (imprimable avec terrain)
+    const envGroup = new THREE.Group();           // PAC, clôtures, murets, haies, boussole Nord (non imprimables)
 
     worldRoot.add(
-      bodyGroup, roofGroup, glassGroup, furnitureGroup,
+      bodyGroup, roofGroup, glassGroup, interiorDoorsGroup, furnitureGroup,
       terraceGroup, terraceGridGroup, terrainGroup, envGroup
     );
 
@@ -852,12 +916,19 @@
     }
 
     // Repère orthonormé local pour l'aile à 45° depuis P1(17.05, 0.00)
+    // +u : vers le Sud (axe allée 286/93 & photo drone droite), +v : vers l'Ouest (photo drone bas)
     const SQRT1_2 = Math.SQRT1_2;
     function uvToPlan(u, v) {
       return new THREE.Vector2(
         17.05 + (u - v) * SQRT1_2,
         (u + v) * SQRT1_2
       );
+    }
+    function planToUV(x, z) {
+      return {
+        u: ((x - 17.05) + z) * SQRT1_2,
+        v: (-(x - 17.05) + z) * SQRT1_2
+      };
     }
 
     // =========================================================================
@@ -1147,7 +1218,7 @@
           handle.position.set(leafW - 0.09, 1.02, 0);
           pivot.add(handle);
 
-          glassGroup.add(pivot);
+          interiorDoorsGroup.add(pivot);
         }
 
         cursor = d.s1;
@@ -1297,224 +1368,132 @@
     // Cloison d'entrée Chambre 3 depuis le couloir : (14.57, 4.25) -> ptCelDresA(15.83, 5.04) avec porte PP 83
     addPartition(14.57, 4.25, ptCelDresA.x, ptCelDresA.y, [{ s0: 0.30, s1: 1.13, swing: -1 }]);
 
-    // =========================================================================
-    // 9. MOBILIER STYLISÉ & VÉHICULE (TOGGLEABLE, NON IMPRIMABLE)
-    // =========================================================================
-    const mWood = new THREE.MeshStandardMaterial({ color: 0xb58a5b, roughness: 0.7 });
-    const mFabric = new THREE.MeshStandardMaterial({ color: 0x5c6b78, roughness: 0.9 });
-    const mBed = new THREE.MeshStandardMaterial({ color: 0xefece4, roughness: 0.85 });
-    const mBlanket = new THREE.MeshStandardMaterial({ color: 0x4d6f80, roughness: 0.88 });
-    const mCab = new THREE.MeshStandardMaterial({ color: 0xedeae3, roughness: 0.55 });
-    const mTop = new THREE.MeshStandardMaterial({ color: 0x3c4146, roughness: 0.45 });
-    const mCeram = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22 });
-
-    function addFurn(w, h, d, x, y, z, material, rotY = 0) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-      m.position.set(x, y, z);
-      m.rotation.y = rotY;
-      m.castShadow = true;
-      m.receiveShadow = true;
-      furnitureGroup.add(m);
-      return m;
-    }
-
-    function addBed(x, z, rotY, w = 1.60, l = 2.00) {
-      const g = new THREE.Group();
-      g.position.set(x, 0, z);
-      g.rotation.y = rotY;
-      const base = new THREE.Mesh(new THREE.BoxGeometry(w, 0.26, l), mWood); base.position.y = 0.13;
-      const matt = new THREE.Mesh(new THREE.BoxGeometry(w - 0.08, 0.22, l - 0.08), mBed); matt.position.y = 0.35;
-      const duv = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, 0.06, l * 0.62), mBlanket); duv.position.set(0, 0.47, l * 0.16);
-      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.12, 0.34), mCeram); p1.position.set(-w * 0.22, 0.51, -l * 0.34);
-      const p2 = p1.clone(); p2.position.x = w * 0.22;
-      [base, matt, duv, p1, p2].forEach(o => { o.castShadow = true; o.receiveShadow = true; g.add(o); });
-      furnitureGroup.add(g);
-    }
-
-    // Lits Chambres 1, 2, 3
-    addBed(1.42, 1.85, Math.PI / 2, 1.55, 2.00);
-    addBed(9.65, 1.85, -Math.PI / 2, 1.55, 2.00);
-    addBed(15.70, 1.85, -Math.PI / 4, 1.70, 2.00);
-
-    // Placards encastrés (Ch1, Dgt 2,17 m jusqu'au décrochage, Ch2)
-    addFurn(3.55, 2.25, 0.56, 2.18, 1.125, 3.61, mCab);
-    addFurn(2.10, 2.25, 0.56, 5.18, 1.125, 3.61, mCab);
-    addFurn(3.25, 2.25, 0.56, 9.18, 1.125, 3.61, mCab);
-
-    // Bains (4,78 m²) + WC (1,73 m²) + WC Entrée (1,64 m²)
-    addFurn(1.70, 0.55, 0.78, 5.25, 0.275, 0.76, mCeram); // Baignoire
-    addFurn(1.05, 0.82, 0.48, 4.70, 0.41, 2.00, mCab);   // Vasque
-    addFurn(0.38, 0.42, 0.56, 6.95, 0.21, 0.68, mCeram); // WC 1,73 m²
-    // WC 1,64 m² (cuvette au fond Sud + lave-mains d'angle)
-    addFurn(0.38, 0.42, 0.56, 13.12, 0.21, 7.22, mCeram);
-    addFurn(0.34, 0.78, 0.26, 13.42, 0.39, 6.20, mCeram);
-
-    // Bureau (14,11 m²)
-    addFurn(0.78, 0.75, 1.80, 13.95, 0.375, 2.15, mWood);
-    addFurn(0.85, 0.72, 1.65, 11.45, 0.36, 2.15, mFabric);
-
-    // Pièces de vie (55,00 m²) : Salon Ouest + Salle à manger centre + Cuisine en U Est
-    addFurn(2.85, 0.42, 0.95, 2.35, 0.21, 4.75, mFabric);
-    addFurn(2.85, 0.76, 0.22, 2.35, 0.38, 4.38, mFabric);
-    addFurn(0.95, 0.42, 1.80, 3.30, 0.21, 6.05, mFabric);
-    addFurn(0.82, 0.68, 0.82, 1.15, 0.34, 7.60, mFabric, 0.55); // Fauteuil
-    addFurn(1.10, 0.34, 0.72, 1.95, 0.17, 6.40, mWood);         // Table basse
-    addFurn(2.35, 0.46, 0.44, 2.40, 0.23, 8.76, mWood);         // Meuble TV
-    addFurn(1.45, 0.80, 0.05, 2.40, 1.00, 8.92, mat.anthracite);
-
-    // Table à manger + 6 chaises
-    addFurn(1.05, 0.76, 2.25, 5.25, 0.38, 6.50, mWood);
-    for (let k = -1; k <= 1; k++) {
-      addFurn(0.42, 0.46, 0.42, 4.52, 0.23, 6.50 + k * 0.68, mFabric);
-      addFurn(0.42, 0.46, 0.42, 5.98, 0.23, 6.50 + k * 0.68, mFabric);
-    }
-
-    // Cuisine en U avec bar/îlot, plaque de cuisson et évier sous la fenêtre 1,60 m (px = 8.51..10.11)
-    addFurn(0.68, 0.90, 3.15, 7.45, 0.45, 7.38, mCab);
-    addFurn(0.76, 0.05, 3.20, 7.45, 0.92, 7.38, mTop);
-    addFurn(2.80, 0.90, 0.66, 8.80, 0.45, 8.66, mCab);
-    addFurn(2.85, 0.05, 0.70, 8.80, 0.92, 8.66, mTop);
-    addFurn(0.65, 2.15, 2.65, 9.85, 1.075, 7.25, mCab); // Colonnes four/réfrigérateur
-    addFurn(0.56, 0.02, 0.62, 7.45, 0.955, 7.05, mat.anthracite); // Plaque cuisson
-    addFurn(0.78, 0.03, 0.46, 9.25, 0.95, 8.66, mat.chrome);      // Évier
-
-    // Cellier : lave-linge, sèche-linge et unité technique PAC le long du mur commun Dressing
-    const cAp1 = uvToPlan(3.35, 4.80);
-    const cAp2 = uvToPlan(4.05, 4.80);
-    const cAp3 = uvToPlan(4.85, 4.80);
-    addFurn(0.62, 0.85, 0.62, cAp1.x, 0.425, cAp1.y, mCeram, -Math.PI / 4);
-    addFurn(0.62, 0.85, 0.62, cAp2.x, 0.425, cAp2.y, mCeram, -Math.PI / 4);
-    addFurn(0.68, 1.85, 0.62, cAp3.x, 0.925, cAp3.y, mCab, -Math.PI / 4);
-
-    // Dressing : deux linéaires de penderies 2,70 m de chaque côté
-    const dr1 = uvToPlan(4.15, 2.30);
-    const dr2 = uvToPlan(4.15, 4.08);
-    addFurn(2.65, 2.15, 0.54, dr1.x, 1.075, dr1.y, mCab, -Math.PI / 4);
-    addFurn(2.65, 2.15, 0.54, dr2.x, 1.075, dr2.y, mCab, -Math.PI / 4);
-
-    // Bains parentale (4,58 m²) : douche italienne + double vasque
-    const shPos = uvToPlan(5.00, 1.14);
-    const vnPos = uvToPlan(3.95, 1.62);
-    addFurn(0.95, 0.08, 1.48, shPos.x, 0.04, shPos.y, mCeram, -Math.PI / 4);
-    addFurn(1.30, 0.82, 0.50, vnPos.x, 0.41, vnPos.y, mCab, -Math.PI / 4);
-
-    // Silhouette de véhicule stylisé garé dans le garage double (toggleable avec mobilier)
-    function addGarageCar(uPos, vPos, hexColor) {
-      const p = uvToPlan(uPos, vPos);
-      const g = new THREE.Group();
-      g.position.set(p.x, 0, p.y);
-      g.rotation.y = Math.PI / 4;
-      const cMat = new THREE.MeshStandardMaterial({ color: hexColor, roughness: 0.34, metalness: 0.46 });
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.80, 0.60, 4.25), cMat); body.position.y = 0.48;
-      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.54, 2.20), cMat); cab.position.set(0, 1.00, -0.15);
-      const wMat = new THREE.MeshStandardMaterial({ color: 0x202428, roughness: 0.9 });
-      [[-0.85, 1.30], [0.85, 1.30], [-0.85, -1.30], [0.85, -1.30]].forEach(([wx, wz]) => {
-        const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.22, 14), wMat);
-        wh.rotation.z = Math.PI / 2;
-        wh.position.set(wx, 0.30, wz);
-        g.add(wh);
-      });
-      [body, cab].forEach(o => { o.castShadow = true; o.receiveShadow = true; g.add(o); });
-      furnitureGroup.add(g);
-    }
-    addGarageCar(7.65, 3.45, 0x45566b);
+    // Descentes d'eaux pluviales (EP 80) aux angles (visuelles, exclues de l'export 3D)
+    [
+      [-0.08, -0.08],
+      [17.08, -0.08],
+      [25.63,  8.50],
+      [12.82,  9.44],
+      [-0.08,  9.44]
+    ].forEach(([dx, dz]) => {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.86, 10), mat.gutterAlu);
+      pipe.position.set(dx, 1.43, dz);
+      pipe.castShadow = true;
+      pipe.receiveShadow = true;
+      bodyGroup.add(pipe);
+    });
 
     // =========================================================================
-    // 10. TOITURE 4 PANS À 36 % — SOLIDE FERMÉ ÉTANCHE (DÉBORD 0,40 m)
+    // 9. TOITURE 4 PANS À 36 % AVEC AILE 45° — SOLIDE FERMÉ ET ÉTANCHE
     // =========================================================================
-    const Y_EAVE = 2.95;
-    const Y_SOFFIT = 2.85;
+    const Y_EAVE = 2.955;
+    const Y_SOFFIT = 2.84;
 
-    // Égouts exacts à débord 0,40 m tout autour (file droit au-dessus du patio d'entrée)
     const E_XZ = [
-      [-0.40,   -0.40],   // E0: NW
-      [17.2157, -0.40],   // E1: NE bend
-      [26.1157,  8.50],   // E2: Far-East
-      [20.74,   13.8757], // E3: South garage
-      [16.6243,  9.76],   // E4: Noue patio / garage
-      [-0.40,    9.76]    // E5: SW
+      [-0.35,  -0.35],  // E0: NW
+      [17.195, -0.35],  // E1: Cassure 45° NE
+      [26.045,  8.50],  // E2: Extrême Est
+      [20.74,  13.805], // E3: Sud garage
+      [16.645,  9.71],  // E4: Pied de noue patio
+      [-0.35,   9.71]   // E5: SW
     ];
+
     const ETop = E_XZ.map(([x, z]) => new THREE.Vector3(x, Y_EAVE, z));
     const EBot = E_XZ.map(([x, z]) => new THREE.Vector3(x, Y_SOFFIT, z));
 
-    // Faîtages exacts à pente uniforme 36 % (principal Y = 4,779 m, aile garage Y = 4,318 m)
-    const R0 = new THREE.Vector3(4.68,    4.7788, 4.68);
-    const R1 = new THREE.Vector3(15.1115, 4.7788, 4.68);
-    const R2 = new THREE.Vector3(18.1988, 4.3184, 5.9588);
-    const R3 = new THREE.Vector3(20.74,   4.3184, 8.50);
+    // Sommets exacts des faîtages & jonction (pente uniforme 36 %)
+    const R0 = new THREE.Vector3(4.68,   4.766, 4.68);
+    const R1 = new THREE.Vector3(15.112, 4.766, 4.68);
+    const R2 = new THREE.Vector3(18.199, 4.305, 5.959);
+    const R3 = new THREE.Vector3(20.74,  4.305, 8.50);
 
-    const rPos = [], rNorm = [], rUV = [];
-    function addRoofSlope(verts, eStart, eEnd) {
-      const uAxis = new THREE.Vector3().subVectors(eEnd, eStart).normalize();
-      const upRef = new THREE.Vector3(0, 1, 0);
+    const roofPos = [];
+    const roofNorm = [];
+    const roofUV = [];
+
+    function addRoofSlopeFace(verts, eaveStart, eaveEnd) {
+      const uAxis = new THREE.Vector3().subVectors(eaveEnd, eaveStart).normalize();
+      const upExp = new THREE.Vector3(0, 1, 0);
+      const tileScale = 0.42;
+
       for (let k = 1; k < verts.length - 1; k++) {
         const a = verts[0], b = verts[k], c = verts[k + 1];
         const ab = new THREE.Vector3().subVectors(b, a);
         const ac = new THREE.Vector3().subVectors(c, a);
         const n = new THREE.Vector3().crossVectors(ab, ac);
         let v1 = a, v2 = b, v3 = c;
-        if (n.dot(upRef) < 0) { v2 = c; v3 = b; n.negate(); }
+        if (n.dot(upExp) < 0) {
+          v2 = c; v3 = b;
+          n.negate();
+        }
         n.normalize();
+
         const vAxis = new THREE.Vector3().crossVectors(n, uAxis).normalize();
         if (vAxis.y < 0) vAxis.negate();
 
-        rPos.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
-        rNorm.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
+        roofPos.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+        roofNorm.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
         for (const v of [v1, v2, v3]) {
-          const rel = new THREE.Vector3().subVectors(v, eStart);
-          rUV.push(rel.dot(uAxis) * 0.44, rel.dot(vAxis) * 0.44);
+          const rel = new THREE.Vector3().subVectors(v, eaveStart);
+          roofUV.push(rel.dot(uAxis) * tileScale, rel.dot(vAxis) * tileScale);
         }
       }
     }
 
-    addRoofSlope([ETop[0], ETop[1], R1, R0],     ETop[0], ETop[1]); // Pan Nord
-    addRoofSlope([ETop[5], ETop[0], R0],         ETop[5], ETop[0]); // Croupe Ouest
-    addRoofSlope([ETop[4], ETop[5], R0, R1, R2], ETop[4], ETop[5]); // Pan Sud + patio couvert
-    addRoofSlope([ETop[1], ETop[2], R3, R2, R1], ETop[1], ETop[2]); // Pan NE 45°
-    addRoofSlope([ETop[2], ETop[3], R3],         ETop[2], ETop[3]); // Croupe SE garage
-    addRoofSlope([ETop[3], ETop[4], R2, R3],     ETop[3], ETop[4]); // Pan façade garage
+    addRoofSlopeFace([ETop[0], ETop[1], R1, R0],     ETop[0], ETop[1]); // Pan Nord
+    addRoofSlopeFace([ETop[5], ETop[0], R0],         ETop[5], ETop[0]); // Croupe Ouest
+    addRoofSlopeFace([ETop[4], ETop[5], R0, R1, R2], ETop[4], ETop[5]); // Pan Sud principal
+    addRoofSlopeFace([ETop[1], ETop[2], R3, R2, R1], ETop[1], ETop[2]); // Pan Nord-Est 45°
+    addRoofSlopeFace([ETop[2], ETop[3], R3],         ETop[2], ETop[3]); // Croupe Est garage
+    addRoofSlopeFace([ETop[3], ETop[4], R2, R3],     ETop[3], ETop[4]); // Pan Avant garage
 
     const roofTopGeom = new THREE.BufferGeometry();
-    roofTopGeom.setAttribute('position', new THREE.Float32BufferAttribute(rPos, 3));
-    roofTopGeom.setAttribute('normal', new THREE.Float32BufferAttribute(rNorm, 3));
-    roofTopGeom.setAttribute('uv', new THREE.Float32BufferAttribute(rUV, 2));
+    roofTopGeom.setAttribute('position', new THREE.Float32BufferAttribute(roofPos, 3));
+    roofTopGeom.setAttribute('normal', new THREE.Float32BufferAttribute(roofNorm, 3));
+    roofTopGeom.setAttribute('uv', new THREE.Float32BufferAttribute(roofUV, 2));
     const roofTopMesh = new THREE.Mesh(roofTopGeom, mat.roofTiles);
     tagPrintable(roofTopMesh, 'Toiture', '#B4482D');
     roofGroup.add(roofTopMesh);
 
-    // Fermeture inférieure étanche (bandeaux de rive + sous-face PVC blanc plane à Y = 2,85 m)
-    const sPos = [], sNorm = [], sUV = [];
+    // Bandeau de rive périphérique + sous-face plane PVC blanc (volume fermé étanche)
+    const soffitPos = [], soffitNorm = [], soffitUV = [];
     for (let i = 0; i < E_XZ.length; i++) {
       const next = (i + 1) % E_XZ.length;
       const p0 = EBot[i], p1 = EBot[next], p2 = ETop[next], p3 = ETop[i];
       const outN = new THREE.Vector3(p1.z - p0.z, 0, -(p1.x - p0.x)).normalize();
-      addOrientedTri(sPos, sNorm, sUV, p0, p1, p2, outN, 0.3);
-      addOrientedTri(sPos, sNorm, sUV, p0, p2, p3, outN, 0.3);
+      addOrientedTri(soffitPos, soffitNorm, soffitUV, p0, p1, p2, outN, 0.30);
+      addOrientedTri(soffitPos, soffitNorm, soffitUV, p0, p2, p3, outN, 0.30);
     }
-    const soffitTris = THREE.ShapeUtils.triangulateShape(E_XZ.map(([x, z]) => new THREE.Vector2(x, z)), []);
+
+    const eaveShapePts = E_XZ.map(([x, z]) => new THREE.Vector2(x, z));
+    const soffitTris = THREE.ShapeUtils.triangulateShape(eaveShapePts, []);
     const downDir = new THREE.Vector3(0, -1, 0);
     for (const [i0, i1, i2] of soffitTris) {
-      addOrientedTri(sPos, sNorm, sUV, EBot[i0], EBot[i1], EBot[i2], downDir, 0.25, true);
+      addOrientedTri(soffitPos, soffitNorm, soffitUV, EBot[i0], EBot[i1], EBot[i2], downDir, 0.25, true);
     }
-    const soffitGeom = new THREE.BufferGeometry();
-    soffitGeom.setAttribute('position', new THREE.Float32BufferAttribute(sPos, 3));
-    soffitGeom.setAttribute('normal', new THREE.Float32BufferAttribute(sNorm, 3));
-    soffitGeom.setAttribute('uv', new THREE.Float32BufferAttribute(sUV, 2));
-    const roofSoffitMesh = new THREE.Mesh(soffitGeom, mat.roofSoffit);
-    tagPrintable(roofSoffitMesh, 'Toiture', '#F7F7F7');
+
+    const roofSoffitGeom = new THREE.BufferGeometry();
+    roofSoffitGeom.setAttribute('position', new THREE.Float32BufferAttribute(soffitPos, 3));
+    roofSoffitGeom.setAttribute('normal', new THREE.Float32BufferAttribute(soffitNorm, 3));
+    roofSoffitGeom.setAttribute('uv', new THREE.Float32BufferAttribute(soffitUV, 2));
+    const roofSoffitMesh = new THREE.Mesh(roofSoffitGeom, mat.roofSoffit);
+    tagPrintable(roofSoffitMesh, 'Toiture', '#F4F5F7');
     roofGroup.add(roofSoffitMesh);
 
-    // Faîtières & arêtiers en relief
-    [[R0, R1], [R1, R2], [R2, R3], [ETop[0], R0], [ETop[5], R0], [ETop[1], R1], [ETop[2], R3], [ETop[3], R3]]
-      .forEach(([a, b]) => {
-        const len = a.distanceTo(b);
-        const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, len), mat.roofRidge);
-        cap.position.set(mid.x, mid.y + 0.02, mid.z);
-        cap.lookAt(b.x, b.y + 0.02, b.z);
-        tagPrintable(cap, 'Toiture', '#A23C23');
-        roofGroup.add(cap);
-      });
+    // Tuiles faîtières & arêtiers en relief
+    [
+      [R0, R1], [R1, R2], [R2, R3],
+      [ETop[0], R0], [ETop[5], R0], [ETop[1], R1],
+      [ETop[2], R3], [ETop[3], R3]
+    ].forEach(([a, b]) => {
+      const len = a.distanceTo(b);
+      const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, len), mat.roofRidge);
+      cap.position.set(mid.x, mid.y + 0.02, mid.z);
+      cap.lookAt(b.x, b.y + 0.02, b.z);
+      tagPrintable(cap, 'Toiture', '#A23C23');
+      roofGroup.add(cap);
+    });
 
     // Noue métallique entre E4 et R2
     {
@@ -1526,197 +1505,349 @@
       roofGroup.add(valley);
     }
 
-    // Gouttières alu corniche alignées à Y_SOFFIT (imprimables à plat sans support)
+    // Gouttières alu corniche tout autour des 6 égouts
     for (let i = 0; i < E_XZ.length; i++) {
-      const a = ETop[i], b = ETop[(i + 1) % E_XZ.length];
-      const dx = b.x - a.x, dz = b.z - a.z;
+      const a = ETop[i];
+      const b = ETop[(i + 1) % E_XZ.length];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
       const len = Math.hypot(dx, dz);
       const outN = new THREE.Vector3(dz, 0, -dx).normalize();
       const mid = new THREE.Vector3((a.x + b.x) * 0.5, (Y_SOFFIT + Y_EAVE) * 0.5, (a.z + b.z) * 0.5)
-        .addScaledVector(outN, 0.06);
-      const gMesh = new THREE.Mesh(new THREE.BoxGeometry(len + 0.14, 0.10, 0.10), mat.gutterAlu);
-      gMesh.position.copy(mid);
-      gMesh.rotation.y = Math.atan2(-dz, dx);
-      tagPrintable(gMesh, 'Toiture', '#565D65');
-      roofGroup.add(gMesh);
+        .addScaledVector(outN, 0.065);
+      const gutter = new THREE.Mesh(new THREE.BoxGeometry(len + 0.14, 0.115, 0.11), mat.gutterAlu);
+      gutter.position.copy(mid);
+      gutter.rotation.y = Math.atan2(-dz, dx);
+      tagPrintable(gutter, 'Toiture', '#565D65');
+      roofGroup.add(gutter);
     }
 
-    // Descentes d'eaux pluviales (détails visuels sur le groupe body, non imprimables)
-    [[-0.07, -0.07], [17.09, -0.07], [25.63, 8.50], [12.83, 9.43], [-0.07, 9.43]].forEach(([dx, dz]) => {
-      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.86, 10), mat.gutterAlu);
-      pipe.position.set(dx, 1.43, dz);
-      pipe.castShadow = true;
-      bodyGroup.add(pipe);
-    });
+    // =========================================================================
+    // 10. MOBILIER INTÉRIEUR STYLISÉ & VÉHICULES (TOGGLEABLE, NON IMPRIMABLE)
+    // =========================================================================
+    const mWood = new THREE.MeshStandardMaterial({ color: 0xb5895a, roughness: 0.72 });
+    const mFabric = new THREE.MeshStandardMaterial({ color: 0x5c6b78, roughness: 0.90 });
+    const mBed = new THREE.MeshStandardMaterial({ color: 0xf0ede6, roughness: 0.86 });
+    const mBlanket = new THREE.MeshStandardMaterial({ color: 0x537483, roughness: 0.88 });
+    const mCabinet = new THREE.MeshStandardMaterial({ color: 0xeeeae3, roughness: 0.58 });
+    const mCounter = new THREE.MeshStandardMaterial({ color: 0x3b4046, roughness: 0.45 });
+    const mCeramic = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22 });
+
+    function addFurnBox(w, h, d, x, y, z, material, rotY = 0) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      m.position.set(x, y, z);
+      m.rotation.y = rotY;
+      m.castShadow = true;
+      m.receiveShadow = true;
+      furnitureGroup.add(m);
+      return m;
+    }
+
+    function addBed(x, z, rotY = 0, w = 1.60, l = 2.00) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.rotation.y = rotY;
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(w, 0.28, l), mWood);
+      frame.position.y = 0.14;
+      const mattress = new THREE.Mesh(new THREE.BoxGeometry(w - 0.08, 0.22, l - 0.08), mBed);
+      mattress.position.y = 0.36;
+      const blanket = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, 0.06, l * 0.62), mBlanket);
+      blanket.position.set(0, 0.48, l * 0.16);
+      const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.12, 0.34), mCeramic);
+      p1.position.set(-w * 0.22, 0.52, -l * 0.34);
+      const p2 = p1.clone();
+      p2.position.x = w * 0.22;
+      [frame, mattress, blanket, p1, p2].forEach(o => { o.castShadow = true; o.receiveShadow = true; g.add(o); });
+      furnitureGroup.add(g);
+    }
+
+    // Lits Chambres 1, 2, 3
+    addBed(1.42, 1.85, Math.PI / 2, 1.55, 2.00);
+    addBed(9.65, 1.85, -Math.PI / 2, 1.55, 2.00);
+    addBed(15.85, 2.05, -Math.PI / 4, 1.75, 2.05);
+
+    // Placards encastrés
+    addFurnBox(3.55, 2.25, 0.56, 2.15, 1.125, 3.60, mCabinet);
+    addFurnBox(2.05, 2.25, 0.56, 5.18, 1.125, 3.60, mCabinet);
+    addFurnBox(3.15, 2.25, 0.56, 9.15, 1.125, 3.60, mCabinet);
+    addFurnBox(0.56, 2.25, 2.95, 10.56, 1.125, 7.50, mCabinet);
+
+    // Sanitaires SDB 1, WC 1 & WC 2
+    addFurnBox(1.70, 0.55, 0.76, 5.25, 0.275, 0.72, mCeramic);
+    addFurnBox(1.00, 0.82, 0.48, 4.70, 0.41, 2.04, mCabinet);
+    addFurnBox(0.38, 0.42, 0.56, 6.95, 0.21, 0.64, mCeramic);
+    addFurnBox(0.38, 0.42, 0.56, 13.15, 0.21, 7.22, mCeramic);
+
+    // Bureau
+    addFurnBox(0.76, 0.75, 1.80, 14.05, 0.375, 2.20, mWood);
+    addFurnBox(0.84, 0.74, 1.65, 11.45, 0.37, 2.20, mFabric);
+
+    // Cuisine en U
+    addFurnBox(0.64, 0.90, 3.05, 7.50, 0.45, 7.45, mCabinet);
+    addFurnBox(0.68, 0.05, 3.10, 7.50, 0.92, 7.45, mCounter);
+    addFurnBox(2.60, 0.90, 0.64, 8.95, 0.45, 8.68, mCabinet);
+    addFurnBox(2.65, 0.05, 0.68, 8.95, 0.92, 8.68, mCounter);
+    addFurnBox(0.62, 2.15, 2.75, 9.88, 1.075, 7.35, mCabinet);
+    addFurnBox(0.54, 0.02, 0.64, 7.50, 0.955, 7.12, mat.anthracite);
+    addFurnBox(0.74, 0.03, 0.46, 9.00, 0.95, 8.68, mat.chrome);
+
+    // Table à manger & 6 chaises
+    addFurnBox(1.05, 0.76, 2.20, 5.45, 0.38, 6.55, mWood);
+    for (let k = -1; k <= 1; k++) {
+      addFurnBox(0.42, 0.46, 0.42, 4.72, 0.23, 6.55 + k * 0.68, mFabric);
+      addFurnBox(0.42, 0.46, 0.42, 6.18, 0.23, 6.55 + k * 0.68, mFabric);
+    }
+
+    // Salon (canapé d'angle, table basse, meuble TV)
+    addFurnBox(2.75, 0.42, 0.92, 2.30, 0.21, 4.65, mFabric);
+    addFurnBox(2.75, 0.76, 0.22, 2.30, 0.38, 4.28, mFabric);
+    addFurnBox(0.92, 0.42, 1.80, 3.22, 0.21, 5.90, mFabric);
+    addFurnBox(1.08, 0.34, 0.74, 1.90, 0.17, 6.30, mWood);
+    addFurnBox(2.30, 0.48, 0.46, 2.45, 0.24, 8.75, mWood);
+    addFurnBox(1.45, 0.80, 0.05, 2.45, 1.04, 8.92, mat.anthracite);
+
+    // Bains parentale, Dressing & Cellier (orientés à 45°)
+    const shPt = uvToPlan(4.90, 1.05);
+    addFurnBox(0.95, 0.08, 1.35, shPt.x, 0.04, shPt.y, mCeramic, -Math.PI / 4);
+    const vanPt = uvToPlan(3.35, 1.50);
+    addFurnBox(0.90, 0.82, 0.48, vanPt.x, 0.41, vanPt.y, mCabinet, -Math.PI / 4);
+    const drPt1 = uvToPlan(4.15, 2.32);
+    const drPt2 = uvToPlan(4.15, 4.05);
+    addFurnBox(2.45, 2.15, 0.50, drPt1.x, 1.075, drPt1.y, mCabinet, -Math.PI / 4);
+    addFurnBox(2.45, 2.15, 0.50, drPt2.x, 1.075, drPt2.y, mCabinet, -Math.PI / 4);
+    const celPt = uvToPlan(4.25, 4.82);
+    addFurnBox(1.30, 0.85, 0.60, celPt.x, 0.425, celPt.y, mCeramic, -Math.PI / 4);
+
+    // Mobilier de terrasse stylisé (salon de jardin & table repas)
+    addFurnBox(1.90, 0.74, 0.95, 11.45, 0.35, 10.65, mat.anthracite, -0.78);
+    addFurnBox(1.65, 0.42, 0.70, 2.25, 0.19, 11.35, mFabric, -0.78);
+    addFurnBox(1.65, 0.42, 0.70, 0.80, 0.19, 10.05, mFabric, -0.78);
+    addFurnBox(0.90, 0.32, 0.55, 1.52, 0.14, 10.70, mWood, -0.78);
+
+    // Véhicule stylisé garé dans la cour (comme sur les photos drone) + 1 véhicule dans le garage
+    function addStylizedCar(x, y, z, rotY, bodyHex) {
+      const car = new THREE.Group();
+      car.position.set(x, y, z);
+      car.rotation.y = rotY;
+      const cMat = new THREE.MeshStandardMaterial({ color: bodyHex, roughness: 0.32, metalness: 0.45 });
+      const lower = new THREE.Mesh(new THREE.BoxGeometry(1.80, 0.60, 4.25), cMat);
+      lower.position.y = 0.48;
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.54, 0.54, 2.20), cMat);
+      cabin.position.set(0, 1.00, -0.15);
+      const wMat = new THREE.MeshStandardMaterial({ color: 0x1e2228, roughness: 0.9 });
+      [[-0.85, 1.28], [0.85, 1.28], [-0.85, -1.28], [0.85, -1.28]].forEach(([wx, wz]) => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.21, 14), wMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.31, wz);
+        car.add(wheel);
+      });
+      [lower, cabin].forEach(o => { o.castShadow = true; o.receiveShadow = true; car.add(o); });
+      furnitureGroup.add(car);
+    }
+    const garCarPt = uvToPlan(7.55, 3.65);
+    addStylizedCar(garCarPt.x, 0.008, garCarPt.y, Math.PI / 4, 0x3b4d61);
 
     // =========================================================================
-    // 11. TERRASSE 3,60 m DE LARGE EN DALLES 60×60 cm (CONTINUE SOUS PATIO)
+    // 11. TERRASSE 3,60 m EN DALLES 60×60 CM CONTINUE SOUS LE PATIO D'ENTRÉE
     // =========================================================================
-    // Façade Sud principale : pz = 9,36 -> 12,96 (EXACTEMENT 3,60 m = 6 dalles de 60 cm !)
-    // Pignon Ouest : px = -2,40 -> 0,00 (2,40 m = 4 dalles de 60 cm) + pan coupé angle SW
-    // Continue sous tout le patio couvert (px = 12,90..15,35, pz = 7,92..9,36) jusqu'au bord garage
-    const terracePolyXZ = [
-      [-2.40,  0.00], // Retour pignon Ouest (2,40 m = 4 dalles)
-      [ 0.00,  0.00], // Angle NW
-      [ 0.00,  9.36], // Angle SW (P7)
-      [12.90,  9.36], // Angle façade Sud / patio (P6)
-      [12.90,  7.92], // Fond patio porte d'entrée (P5)
-      [15.35,  7.92], // Fond patio WC/Cellier (P4)
-      [16.55,  9.12], // Limite mur diagonal avant porte garage
-      [15.85, 10.65], // Bord patio donnant sur cour gravier
-      [12.90, 12.96], // Coin avant droit à exactement 3,60 m de la façade (9,36 + 3,60)
-      [ 0.00, 12.96], // Bord avant gauche à exactement 3,60 m de la façade
-      [-2.40, 11.40]  // Pan coupé angle SW
+    // Largeur exacte 3,60 m devant façade Sud (Z = 9.36 -> 12.96 = 6 dalles de 60 cm),
+    // retour pignon Ouest (X = -3.00 -> 0.00 = 5 dalles) et prolongement continu sous
+    // tout le patio couvert jusqu'à la limite de la porte de garage (16.71, 9.28).
+    const terracePoly = [
+      [-3.00,  3.36],
+      [ 0.00,  3.36],
+      [ 0.00,  9.36],
+      [12.90,  9.36],
+      [12.90,  7.92],
+      [15.35,  7.92],
+      [16.71,  9.28],
+      [12.96, 12.96],
+      [-3.00, 12.96]
     ];
 
-    // Soubassement terrasse descendant dans le terrain en pente
-    const terracePlinth = new THREE.Mesh(
-      createVerticalPolygonSolid(terracePolyXZ, -1.25, -0.09, 1 / 2.40, 0.0, 9.36),
+    // Soubassement terrasse descendant proprement dans le terrain
+    const terracePlinthMesh = new THREE.Mesh(
+      createVerticalPolygonSolid(terracePoly, -0.58, -0.06, 0.25),
       mat.terraceEdge
     );
-    tagPrintable(terracePlinth, 'Terrasse', '#BCB5A8');
-    terraceGroup.add(terracePlinth);
+    tagPrintable(terracePlinthMesh, 'Terrasse', '#BCB5A8');
+    terraceGroup.add(terracePlinthMesh);
 
-    // Plateau dallé : origine UV alignée sur (px = 0, pz = 9.36), scale = 1 / 2.40 (4 dalles de 0.60 m = 2.40 m)
-    const terraceSlab = new THREE.Mesh(
-      createVerticalPolygonSolid(terracePolyXZ, -0.09, -0.02, 1 / 2.40, 0.0, 9.36),
+    // Dalle supérieure travertin 60×60 cm (1 répétition texture = 2,40 m => uvScale = 1/2.40, origine (0, 9.36))
+    const terraceTopMesh = new THREE.Mesh(
+      createVerticalPolygonSolid(terracePoly, -0.06, -0.02, 1 / 2.40, 0.0, 9.36),
       mat.terraceTop
     );
-    tagPrintable(terraceSlab, 'Terrasse', '#E8E1D5');
-    terraceGroup.add(terraceSlab);
+    tagPrintable(terraceTopMesh, 'Terrasse', '#E3DCCE');
+    terraceGroup.add(terraceTopMesh);
 
-    // Grille 60×60 cm vectorielle superposée (toggleable) découpée exactement sur le polygone de terrasse
-    function buildTerrace60GridLines() {
-      const pts2D = terracePolyXZ.map(([x, z]) => new THREE.Vector2(x, z));
-      const lineCoords = [];
-      const yLine = -0.015;
-      const step = 0.60;
-
-      // Intersection d'une droite horizontale pz = c avec le polygone
-      for (let z = 0.0; z <= 12.961; z = Math.round((z + step) * 1000) / 1000) {
-        // Aligné sur pz = 9.36 (donc 9.36 - 0.60*k et 9.36 + 0.60*k)
-        const zAligned = 9.36 + Math.round((z - 9.36) / step) * step;
-        const xs = [];
-        for (let i = 0; i < pts2D.length; i++) {
-          const a = pts2D[i], b = pts2D[(i + 1) % pts2D.length];
-          if ((a.y <= zAligned && b.y > zAligned) || (b.y <= zAligned && a.y > zAligned)) {
-            const t = (zAligned - a.y) / (b.y - a.y);
-            xs.push(a.x + t * (b.x - a.x));
+    // Grille 60×60 cm accentuée (calepinage exact découpé au polygone de la terrasse, toggleable)
+    {
+      function clipLineWithPoly(isVertical, coord) {
+        const hits = [];
+        for (let i = 0; i < terracePoly.length; i++) {
+          const [x1, z1] = terracePoly[i];
+          const [x2, z2] = terracePoly[(i + 1) % terracePoly.length];
+          if (isVertical) {
+            if ((x1 <= coord && x2 > coord) || (x2 <= coord && x1 > coord)) {
+              const t = (coord - x1) / (x2 - x1);
+              hits.push(z1 + t * (z2 - z1));
+            }
+          } else {
+            if ((z1 <= coord && z2 > coord) || (z2 <= coord && z1 > coord)) {
+              const t = (coord - z1) / (z2 - z1);
+              hits.push(x1 + t * (x2 - x1));
+            }
           }
         }
-        xs.sort((u, v) => u - v);
-        for (let k = 0; k + 1 < xs.length; k += 2) {
-          lineCoords.push(xs[k], yLine, zAligned, xs[k + 1], yLine, zAligned);
-        }
+        hits.sort((a, b) => a - b);
+        return hits;
       }
 
-      // Intersection d'une droite verticale px = c avec le polygone
-      for (let x = -2.40; x <= 16.801; x = Math.round((x + step) * 1000) / 1000) {
-        const zs = [];
-        for (let i = 0; i < pts2D.length; i++) {
-          const a = pts2D[i], b = pts2D[(i + 1) % pts2D.length];
-          if ((a.x <= x && b.x > x) || (b.x <= x && a.x > x)) {
-            const t = (x - a.x) / (b.x - a.x);
-            zs.push(a.y + t * (b.y - a.y));
-          }
-        }
-        zs.sort((u, v) => u - v);
+      const gridPts = [];
+      const yGrid = -0.017;
+      for (let x = -3.00; x <= 16.80 + 1e-4; x += 0.60) {
+        const zs = clipLineWithPoly(true, x);
         for (let k = 0; k + 1 < zs.length; k += 2) {
-          lineCoords.push(x, yLine, zs[k], x, yLine, zs[k + 1]);
+          gridPts.push(x, yGrid, zs[k], x, yGrid, zs[k + 1]);
+        }
+      }
+      for (let z = 3.36; z <= 12.96 + 1e-4; z += 0.60) {
+        const xs = clipLineWithPoly(false, z);
+        for (let k = 0; k + 1 < xs.length; k += 2) {
+          gridPts.push(xs[k], yGrid, z, xs[k + 1], yGrid, z);
         }
       }
 
-      const geom = new THREE.BufferGeometry();
-      geom.setAttribute('position', new THREE.Float32BufferAttribute(lineCoords, 3));
-      const lines = new THREE.LineSegments(
-        geom,
-        new THREE.LineBasicMaterial({ color: 0x8f8574, transparent: true, opacity: 0.45 })
+      const gridGeom = new THREE.BufferGeometry();
+      gridGeom.setAttribute('position', new THREE.Float32BufferAttribute(gridPts, 3));
+      const gridLines = new THREE.LineSegments(
+        gridGeom,
+        new THREE.LineBasicMaterial({ color: 0x8c8273, transparent: true, opacity: 0.65 })
       );
-      terraceGridGroup.add(lines);
+      terraceGridGroup.add(gridLines);
     }
-    buildTerrace60GridLines();
 
     // =========================================================================
-    // 12. TERRAIN EN PENTE SOLIDE, COUR GRAVIER & ACCÈS AVENUE DE V
+    // 12. TERRAIN CADASTRAL (PARCELLES 285, 286 & 93) + PHOTO DRONE + AVENUE DE V
     // =========================================================================
     function getTerrainHeight(x, z) {
-      let h = 0.24 - 0.017 * x - 0.052 * z;
-      if (z > 14.5) h -= (z - 14.5) * 0.030;
-      if (x > 25.0 && z > 10.0) h -= (x - 25.0) * 0.030;
+      const { u, v } = planToUV(x, z);
 
-      const dxR = Math.max(0, -2.5 - x, x - 17.5);
-      const dzR = Math.max(0, -0.8 - z, z - 11.2);
+      // Pente douce générale : jardin Nord (u ≈ -21) légèrement surélevé,
+      // plateforme maison & cour quasi planes (-0.18 à -0.52 m), puis descente
+      // régulière de l'allée en cailloux (parcelles 286 & 93) vers l'Avenue de V.
+      let h;
+      if (u <= 15.0) {
+        h = -0.18 - (u + 4.0) * 0.015 + (v - 10.0) * 0.004;
+      } else {
+        const h15 = -0.18 - 19.0 * 0.015 + (v - 10.0) * 0.004;
+        const du = Math.min(u - 15.0, 28.5);
+        h = h15 - du * 0.056;
+      }
+
+      // Plateforme nivelée autour de la maison & terrasse (conformément au terrassement réel)
+      const dxR = Math.max(0, -2.5 - x, x - 17.4);
+      const dzR = Math.max(0, -1.0 - z, z - 13.1);
       const dRect = Math.hypot(dxR, dzR);
-
-      const uW = ((x - 17.05) + z) * SQRT1_2;
-      const vW = (-(x - 17.05) + z) * SQRT1_2;
-      const dWing = Math.hypot(Math.max(0, -0.5 - uW, uW - 12.8), Math.max(0, -0.8 - vW, vW - 7.8));
-
+      const dWing = Math.hypot(Math.max(0, -0.5 - u, u - 12.6), Math.max(0, -0.8 - v, v - 7.4));
       const distH = Math.min(dRect, dWing);
-      const blend = Math.exp(-(distH * distH) / 16.0);
-      const padH = -0.22 - Math.max(0, (z - 8.0) * 0.040);
+      const blend = Math.exp(-(distH * distH) / 14.0);
+      const padH = -0.17 - Math.max(0, (u - 4.0) * 0.014);
       h = THREE.MathUtils.lerp(h, padH, blend);
 
-      const inRect = (x > -0.2 && x < 17.2 && z > -0.2 && z < 9.5);
-      const inWing = (uW > -0.2 && uW < 12.2 && vW > -0.2 && vW < 7.0);
+      // Décaissement sous l'emprise exacte de la dalle maison
+      const inRect = (x > -0.15 && x < 17.15 && z > -0.15 && z < 9.45);
+      const inWing = (u > -0.15 && u < 12.15 && v > -0.15 && v < 6.95);
       if (inRect || inWing) h = Math.min(h, -0.37);
 
-      return THREE.MathUtils.clamp(h, -1.95, 0.85);
+      return THREE.MathUtils.clamp(h, -2.35, 0.55);
     }
 
-    // Socle maquette ~38 m × 30 m
-    const TX_MIN = -6.5, TX_MAX = 31.5;
-    const TZ_MIN = -6.0, TZ_MAX = 24.0;
-    const BASE_Y = -2.35;
-    const NX = 62, NZ = 50;
+    // Emprise cadastrale exacte en repère (u, v) :
+    // - Parcelle 285 : u ∈ [-21.5, 14.4], v ∈ [-3.0, 23.4] (jardin + maison + cour)
+    // - Allée en cailloux (Parcelles 286 & 93) : u ∈ [14.4, 43.2], v ∈ [16.6, 23.4]
+    // - Amorce Avenue de V : u ∈ [43.2, 47.0], v ∈ [14.2, 23.4]
+    const U_MIN = -21.5, U_MAX = 47.0;
+    const V_MIN = -3.0,  V_MAX = 23.4;
+    const BASE_Y = -2.85;
+    const NU = 86, NV = 33;
+
+    function isInsideParcelUV(u, v) {
+      if (u < U_MIN || u > U_MAX || v < V_MIN || v > V_MAX) return false;
+      if (u <= 14.4) return true;                                  // Parcelle 285
+      if (u <= 16.0) return v >= (15.0 + (u - 14.4));              // Pan coupé angle 284
+      if (u <= 43.2) return v >= 16.6;                             // Allée parcelles 286 & 93
+      return v >= 14.2;                                            // Bande Avenue de V
+    }
 
     function buildSolidTerrain() {
       const grid = [];
-      for (let iz = 0; iz <= NZ; iz++) {
+      for (let iv = 0; iv <= NV; iv++) {
         const row = [];
-        const z = THREE.MathUtils.lerp(TZ_MIN, TZ_MAX, iz / NZ);
-        for (let ix = 0; ix <= NX; ix++) {
-          const x = THREE.MathUtils.lerp(TX_MIN, TX_MAX, ix / NX);
-          row.push(new THREE.Vector3(x, getTerrainHeight(x, z), z));
+        const v = THREE.MathUtils.lerp(V_MIN, V_MAX, iv / NV);
+        for (let iu = 0; iu <= NU; iu++) {
+          const u = THREE.MathUtils.lerp(U_MIN, U_MAX, iu / NU);
+          const p = uvToPlan(u, v);
+          row.push({ pos: new THREE.Vector3(p.x, getTerrainHeight(p.x, p.y), p.y), u, v });
         }
         grid.push(row);
       }
 
+      // Masque des cellules actives appartenant aux parcelles 285, 286, 93 & Avenue de V
+      const active = Array.from({ length: NV }, (_, iv) =>
+        Array.from({ length: NU }, (_, iu) => {
+          const uc = THREE.MathUtils.lerp(U_MIN, U_MAX, (iu + 0.5) / NU);
+          const vc = THREE.MathUtils.lerp(V_MIN, V_MAX, (iv + 0.5) / NV);
+          return isInsideParcelUV(uc, vc);
+        })
+      );
+
       const pos = [], norm = [], col = [];
-      const cGrass1 = new THREE.Color(0x6e8c51);
-      const cGrass2 = new THREE.Color(0x5e7944);
-      const cEarth  = new THREE.Color(0x6b5340);
-      const cGravel = new THREE.Color(0x8c9096);
-      const cRoad   = new THREE.Color(0x454a52);
-      const cSkirt  = new THREE.Color(0x676058);
+      const cGrass1      = new THREE.Color(0x527a37);
+      const cGrass2      = new THREE.Color(0x3f642a);
+      const cDarkGravel  = new THREE.Color(0x535962);
+      const cDriveGravel = new THREE.Color(0x636972);
+      const cWhitePebble = new THREE.Color(0xe4dfd3);
+      const cRoad        = new THREE.Color(0x3b4048);
+      const cRoadMark    = new THREE.Color(0xd5d8dc);
+      const cSkirt       = new THREE.Color(0x5c5750);
 
-      function pointSurfaceColor(x, z) {
-        // Avenue de V au Sud-Est
-        if ((x * 0.40 + z * 0.92) > 30.8) return cRoad;
-
-        // Cour gravillonnée devant terrasse & porte garage
-        const inFrontCourtyard = (x > -2.6 && x < 23.8 && z > 9.5 && z < 20.5 && (x * 0.40 + z * 0.92) < 28.0);
-        // Allée gravier gris le long du pignon SE garage (autour des unités PAC)
-        const sDiag = x + z;
-        const dDiag = x - z;
-        const inGarageAlley = (sDiag >= 33.8 && sDiag <= 38.0 && dDiag >= 6.8 && dDiag <= 18.2);
-
-        // Accès gravier vers Avenue de V
-        const ax = 17.5, az = 16.0, bx = 29.8, bz = 22.0;
-        const abx = bx - ax, abz = bz - az;
-        const t = THREE.MathUtils.clamp(((x - ax) * abx + (z - az) * abz) / (abx * abx + abz * abz), 0, 1);
-        const dAccess = Math.hypot(x - (ax + abx * t), z - (az + abz * t));
-
-        if (inFrontCourtyard || inGarageAlley || dAccess < 2.35) {
-          const grain = (Math.sin(x * 3.1 + z * 2.7) * 0.5 + 0.5) * 0.05;
-          return cGravel.clone().offsetHSL(0, 0, grain - 0.025);
+      function pointSurfaceColor(x, z, u, v) {
+        // 1. Avenue de V au bout de la parcelle 93
+        if (u > 43.2) {
+          if (Math.abs(u - 45.1) < 0.14 && Math.floor(v / 1.8) % 2 === 0) return cRoadMark;
+          return cRoad;
         }
 
-        const blend = Math.sin(x * 0.34) * Math.cos(z * 0.36) * 0.5 + 0.5;
-        if (z < -0.5 && x < 17.5 && x > -3.5) {
-          return cGrass2.clone().lerp(cEarth, 0.38 + blend * 0.22);
+        // 2. Longue allée en cailloux (parcelles 286 & 93)
+        if (u > 14.35) {
+          const g = (Math.sin(x * 3.7 + z * 2.9) * 0.5 + 0.5) * 0.05;
+          return cDriveGravel.clone().offsetHSL(0, 0, g - 0.025);
         }
-        return cGrass2.clone().lerp(cGrass1, blend);
+
+        // 3. Zone gravier gris anthracite : derrière mur NE, pignon garage & cour avant
+        const inGarageBackAndSide = (u >= -0.35 && v <= 6.85);
+        const inBackHouseStrip    = (z <= 0.05 && z >= -0.85 && x >= -0.25 && x <= 17.25);
+        const inFrontCourtyard    = (u >= -5.65 && v > 6.85);
+
+        if (inGarageBackAndSide || inBackHouseStrip || inFrontCourtyard) {
+          // Massifs décoratifs en galets blancs devant la terrasse (visibles sur la photo drone)
+          const dBedCorner = Math.hypot((u - 8.2) / 2.2, (v - 21.6) / 2.0);
+          const inBedPatio = (x >= 8.2 && x <= 14.0 && z >= 12.95 && z <= 14.35);
+          const inBedFront = (x >= -1.0 && x <= 3.6 && z >= 12.95 && z <= 14.25);
+          if (dBedCorner < 1.0 || inBedPatio || inBedFront) {
+            const wGrain = (Math.sin(x * 5.0 + z * 4.3) * 0.5 + 0.5) * 0.03;
+            return cWhitePebble.clone().offsetHSL(0, 0, wGrain - 0.015);
+          }
+
+          const grain = (Math.sin(x * 3.4 + z * 2.8) * 0.5 + 0.5) * 0.045;
+          return cDarkGravel.clone().offsetHSL(0, 0, grain - 0.022);
+        }
+
+        // 4. Pelouse verte du jardin Nord & Ouest (photo drone)
+        const n = Math.sin(x * 0.31 + z * 0.19) * Math.cos(z * 0.35 - x * 0.14) * 0.5 + 0.5;
+        return cGrass2.clone().lerp(cGrass1, n);
       }
 
       const pushTri = (a, b, c, dir, cA, cB, cC) => {
@@ -1733,54 +1864,73 @@
       };
 
       const up = new THREE.Vector3(0, 1, 0);
-      for (let iz = 0; iz < NZ; iz++) {
-        for (let ix = 0; ix < NX; ix++) {
-          const p00 = grid[iz][ix], p10 = grid[iz][ix + 1], p11 = grid[iz + 1][ix + 1], p01 = grid[iz + 1][ix];
-          const k00 = pointSurfaceColor(p00.x, p00.z);
-          const k10 = pointSurfaceColor(p10.x, p10.z);
-          const k11 = pointSurfaceColor(p11.x, p11.z);
-          const k01 = pointSurfaceColor(p01.x, p01.z);
-          pushTri(p00, p01, p11, up, k00, k01, k11);
-          pushTri(p00, p11, p10, up, k00, k11, k10);
+      const down = new THREE.Vector3(0, -1, 0);
+      const dirUPlus  = new THREE.Vector3( SQRT1_2, 0,  SQRT1_2);
+      const dirUMinus = new THREE.Vector3(-SQRT1_2, 0, -SQRT1_2);
+      const dirVPlus  = new THREE.Vector3(-SQRT1_2, 0,  SQRT1_2);
+      const dirVMinus = new THREE.Vector3( SQRT1_2, 0, -SQRT1_2);
+
+      const addSkirtEdge = (t0, t1, outDir) => {
+        const b0 = new THREE.Vector3(t0.x, BASE_Y, t0.z);
+        const b1 = new THREE.Vector3(t1.x, BASE_Y, t1.z);
+        pushTri(b0, b1, t1, outDir, cSkirt, cSkirt, cSkirt);
+        pushTri(b0, t1, t0, outDir, cSkirt, cSkirt, cSkirt);
+      };
+
+      for (let iv = 0; iv < NV; iv++) {
+        for (let iu = 0; iu < NU; iu++) {
+          if (!active[iv][iu]) continue;
+
+          const g00 = grid[iv][iu];
+          const g10 = grid[iv][iu + 1];
+          const g11 = grid[iv + 1][iu + 1];
+          const g01 = grid[iv + 1][iu];
+
+          const k00 = pointSurfaceColor(g00.pos.x, g00.pos.z, g00.u, g00.v);
+          const k10 = pointSurfaceColor(g10.pos.x, g10.pos.z, g10.u, g10.v);
+          const k11 = pointSurfaceColor(g11.pos.x, g11.pos.z, g11.u, g11.v);
+          const k01 = pointSurfaceColor(g01.pos.x, g01.pos.z, g01.u, g01.v);
+
+          // Surface supérieure
+          pushTri(g00.pos, g01.pos, g11.pos, up, k00, k01, k11);
+          pushTri(g00.pos, g11.pos, g10.pos, up, k00, k11, k10);
+
+          // Face inférieure plane à BASE_Y (volume 100 % fermé pour impression 3D)
+          const b00 = new THREE.Vector3(g00.pos.x, BASE_Y, g00.pos.z);
+          const b10 = new THREE.Vector3(g10.pos.x, BASE_Y, g10.pos.z);
+          const b11 = new THREE.Vector3(g11.pos.x, BASE_Y, g11.pos.z);
+          const b01 = new THREE.Vector3(g01.pos.x, BASE_Y, g01.pos.z);
+          pushTri(b00, b10, b11, down, cSkirt, cSkirt, cSkirt);
+          pushTri(b00, b11, b01, down, cSkirt, cSkirt, cSkirt);
+
+          // Jupes verticales sur les bords extérieurs exacts des parcelles 285/286/93
+          if (iu === 0      || !active[iv][iu - 1]) addSkirtEdge(g00.pos, g01.pos, dirUMinus);
+          if (iu === NU - 1 || !active[iv][iu + 1]) addSkirtEdge(g10.pos, g11.pos, dirUPlus);
+          if (iv === 0      || !active[iv - 1][iu]) addSkirtEdge(g00.pos, g10.pos, dirVMinus);
+          if (iv === NV - 1 || !active[iv + 1][iu]) addSkirtEdge(g01.pos, g11.pos, dirVPlus);
         }
       }
-
-      const addSkirt = (pts, outDir) => {
-        for (let i = 0; i < pts.length - 1; i++) {
-          const t0 = pts[i], t1 = pts[i + 1];
-          const b0 = new THREE.Vector3(t0.x, BASE_Y, t0.z);
-          const b1 = new THREE.Vector3(t1.x, BASE_Y, t1.z);
-          pushTri(b0, b1, t1, outDir, cSkirt, cSkirt, cSkirt);
-          pushTri(b0, t1, t0, outDir, cSkirt, cSkirt, cSkirt);
-        }
-      };
-      addSkirt(grid[0], new THREE.Vector3(0, 0, -1));
-      addSkirt(grid[NZ], new THREE.Vector3(0, 0, 1));
-      addSkirt(grid.map(r => r[0]), new THREE.Vector3(-1, 0, 0));
-      addSkirt(grid.map(r => r[NX]), new THREE.Vector3(1, 0, 0));
-
-      const down = new THREE.Vector3(0, -1, 0);
-      const b0 = new THREE.Vector3(TX_MIN, BASE_Y, TZ_MIN);
-      const b1 = new THREE.Vector3(TX_MAX, BASE_Y, TZ_MIN);
-      const b2 = new THREE.Vector3(TX_MAX, BASE_Y, TZ_MAX);
-      const b3 = new THREE.Vector3(TX_MIN, BASE_Y, TZ_MAX);
-      pushTri(b0, b1, b2, down, cSkirt, cSkirt, cSkirt);
-      pushTri(b0, b2, b3, down, cSkirt, cSkirt, cSkirt);
 
       const geom = new THREE.BufferGeometry();
       geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       geom.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
       geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
       const mesh = new THREE.Mesh(geom, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94 }));
-      tagPrintable(mesh, 'Socle_Terrain', '#758D59');
+      tagPrintable(mesh, 'Socle_Terrain', '#688250');
       return mesh;
     }
 
     terrainGroup.add(buildSolidTerrain());
 
     // =========================================================================
-    // 13. ENVIRONNEMENT (2 PAC PIGNON GARAGE, CLÔTURES, ARBRES & BOUSSOLE NORD)
+    // 13. ENVIRONNEMENT PHOTO DRONE (PAC, MURETS, HAIES, CLÔTURES, MASSIFS & NORD)
     // =========================================================================
+    // Véhicule gris stationné dans la cour gravillonnée (comme sur la photo drone)
+    {
+      const cp = uvToPlan(9.8, 12.2);
+      addStylizedCar(cp.x, getTerrainHeight(cp.x, cp.y), cp.y, -Math.PI / 4 + 0.04, 0x5c636b);
+    }
+
     function addHeatPumpUnit(x, z, w, h, d) {
       const y = getTerrainHeight(x, z);
       const g = new THREE.Group();
@@ -1814,67 +1964,148 @@
 
       envGroup.add(g);
     }
-    // Deux unités extérieures PAC contre l'angle arrière du pignon SE garage
+    // Deux unités extérieures PAC contre le pignon SE garage
     addHeatPumpUnit(24.30, 10.30, 0.90, 0.78, 0.38);
     addHeatPumpUnit(25.05,  9.55, 0.68, 0.56, 0.32);
 
-    // Clôtures rigides anthracite bordant la cour SE et les limites Nord/Ouest
-    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x353b42, roughness: 0.6 });
-    const meshWireMat = new THREE.MeshStandardMaterial({ color: 0x2f353b, transparent: true, opacity: 0.28, roughness: 0.8 });
-    function addFenceLine(x1, z1, x2, z2, panels = 7) {
+    // Outil générique pour murets, bordures et clôtures suivant le relief en (u, v)
+    function addWallLineUV(u1, v1, u2, v2, segs, height, thick, material, yEmbed = 0.05) {
+      const p1 = uvToPlan(u1, v1);
+      const p2 = uvToPlan(u2, v2);
+      for (let i = 0; i < segs; i++) {
+        const t0 = i / segs, t1 = (i + 1) / segs;
+        const xa = THREE.MathUtils.lerp(p1.x, p2.x, t0);
+        const za = THREE.MathUtils.lerp(p1.y, p2.y, t0);
+        const xb = THREE.MathUtils.lerp(p1.x, p2.x, t1);
+        const zb = THREE.MathUtils.lerp(p1.y, p2.y, t1);
+        const xm = (xa + xb) * 0.5, zm = (za + zb) * 0.5;
+        const ym = getTerrainHeight(xm, zm);
+        const len = Math.hypot(xb - xa, zb - za);
+        const rot = Math.atan2(-(zb - za), xb - xa);
+        const m = new THREE.Mesh(new THREE.BoxGeometry(len + 0.03, height, thick), material);
+        m.position.set(xm, ym + height * 0.5 - yEmbed, zm);
+        m.rotation.y = rot;
+        m.castShadow = true;
+        m.receiveShadow = true;
+        envGroup.add(m);
+      }
+    }
+
+    const concreteWallMat = new THREE.MeshStandardMaterial({ color: 0xb4b6b8, roughness: 0.9 });
+    const stoneWallMat    = new THREE.MeshStandardMaterial({ color: 0x877e71, roughness: 0.95 });
+    const curbMat         = new THREE.MeshStandardMaterial({ color: 0xd8d7d2, roughness: 0.85 });
+    const woodBorderMat   = new THREE.MeshStandardMaterial({ color: 0x9c764e, roughness: 0.88 });
+    const hedgeMat        = new THREE.MeshStandardMaterial({ color: 0x3b632d, roughness: 0.9 });
+    const fenceMat        = new THREE.MeshStandardMaterial({ color: 0x32383f, roughness: 0.6 });
+    const meshWireMat     = new THREE.MeshStandardMaterial({ color: 0x2f353b, transparent: true, opacity: 0.28, roughness: 0.8 });
+
+    // 1. Muret béton de soutènement au Nord (gauche photo drone, u = -21.2)
+    addWallLineUV(-21.2, -2.9, -21.2, 23.2, 12, 1.05, 0.34, concreteWallMat);
+
+    // 2. Ancien muret en pierres à l'Ouest le long des parcelles 97 & 95 (bas photo drone, v = 23.2)
+    addWallLineUV(-21.2, 23.2, 42.6, 23.2, 24, 0.95, 0.36, stoneWallMat);
+
+    // 3. Haie verte dense côté Est le long de la parcelle 90 (haut photo drone, v = -2.85)
+    addWallLineUV(-20.8, -2.85, 14.1, -2.85, 22, 1.55, 0.65, hedgeMat, 0.1);
+
+    // 4. Bordures béton propres séparant la pelouse du gravier gris (visibles photo drone)
+    addWallLineUV(-0.35, -2.6, -0.35, 0.0, 2, 0.14, 0.08, curbMat, 0.03);
+    // Bordure longeant la bande de gravier derrière le mur arrière P0->P1
+    {
+      const b1 = planToUV(0.0, -0.82), b2 = planToUV(17.0, -0.82);
+      addWallLineUV(b1.u, b1.v, b2.u, b2.v, 8, 0.14, 0.08, curbMat, 0.03);
+    }
+
+    // 5. Bordure bois paysagère courbe devant la terrasse (visible photo drone)
+    const sleeperPts = [
+      planToUV(-0.5, 13.85),
+      planToUV(2.8,  14.20),
+      planToUV(6.2,  14.15),
+      planToUV(9.6,  14.60)
+    ];
+    for (let i = 0; i < sleeperPts.length - 1; i++) {
+      addWallLineUV(
+        sleeperPts[i].u, sleeperPts[i].v,
+        sleeperPts[i + 1].u, sleeperPts[i + 1].v,
+        1, 0.18, 0.12, woodBorderMat, 0.03
+      );
+    }
+
+    // 6. Clôture rigide anthracite bordant la parcelle 284 (droite photo drone + allée 286/93)
+    function addFenceLineUV(u1, v1, u2, v2, panels) {
+      const p1 = uvToPlan(u1, v1);
+      const p2 = uvToPlan(u2, v2);
       for (let i = 0; i <= panels; i++) {
         const t = i / panels;
-        const x = THREE.MathUtils.lerp(x1, x2, t);
-        const z = THREE.MathUtils.lerp(z1, z2, t);
+        const x = THREE.MathUtils.lerp(p1.x, p2.x, t);
+        const z = THREE.MathUtils.lerp(p1.y, p2.y, t);
         const y = getTerrainHeight(x, z);
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.15, 0.06), fenceMat);
-        post.position.set(x, y + 0.55, z);
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.20, 0.06), fenceMat);
+        post.position.set(x, y + 0.58, z);
         post.castShadow = true;
         envGroup.add(post);
 
         if (i < panels) {
-          const nx = THREE.MathUtils.lerp(x1, x2, (i + 1) / panels);
-          const nz = THREE.MathUtils.lerp(z1, z2, (i + 1) / panels);
+          const nx = THREE.MathUtils.lerp(p1.x, p2.x, (i + 1) / panels);
+          const nz = THREE.MathUtils.lerp(p1.y, p2.y, (i + 1) / panels);
           const ny = getTerrainHeight(nx, nz);
           const len = Math.hypot(nx - x, nz - z);
           const rot = Math.atan2(-(nz - z), nx - x);
-          const panel = new THREE.Mesh(new THREE.BoxGeometry(len, 1.02, 0.025), meshWireMat);
-          panel.position.set((x + nx) * 0.5, (y + ny) * 0.5 + 0.56, (z + nz) * 0.5);
+          const panel = new THREE.Mesh(new THREE.BoxGeometry(len, 1.06, 0.025), meshWireMat);
+          panel.position.set((x + nx) * 0.5, (y + ny) * 0.5 + 0.58, (z + nz) * 0.5);
           panel.rotation.y = rot;
           envGroup.add(panel);
         }
       }
     }
-    addFenceLine(-5.8, -5.2, 28.0, -5.2, 11);
-    addFenceLine(-5.8, -5.2, -5.8, 19.0, 8);
-    addFenceLine(11.8, 20.4, 24.4, 15.2, 6);
+    addFenceLineUV(14.3, -2.8, 14.3, 15.0, 7);  // Pignon garage -> angle parcelle 284
+    addFenceLineUV(14.3, 15.0, 15.9, 16.6, 1);  // Pan coupé clôture angle 284
+    addFenceLineUV(15.9, 16.6, 42.6, 16.6, 11); // Longueur allée parcelles 286 & 93
 
-    // Arbres périphériques minimalistes
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4f3a, roughness: 0.9 });
-    const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x4b7740, roughness: 0.85 });
-    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x5c894b, roughness: 0.85 });
-    function addTree(x, z, scale = 1.0) {
-      const y = getTerrainHeight(x, z);
+    // 7. Végétation réaliste : grand cèdre côté Est + petits arbustes dans les massifs galets
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x614734, roughness: 0.92 });
+    const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x3d6338, roughness: 0.86 });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x4f7b42, roughness: 0.86 });
+    const shrubMat = new THREE.MeshStandardMaterial({ color: 0x5c8544, roughness: 0.88 });
+
+    function addTreeUV(u, v, scale = 1.0) {
+      const p = uvToPlan(u, v);
+      const y = getTerrainHeight(p.x, p.y);
       const g = new THREE.Group();
-      g.position.set(x, y, z);
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * scale, 0.16 * scale, 1.35 * scale, 7), trunkMat);
-      trunk.position.y = 0.65 * scale; trunk.castShadow = true; g.add(trunk);
-      const c1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.12 * scale, 1), leafMat1);
-      c1.position.set(0, 2.02 * scale, 0); c1.scale.set(1.05, 0.92, 1.05); c1.castShadow = true; g.add(c1);
-      const c2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.72 * scale, 1), leafMat2);
-      c2.position.set(0.5 * scale, 1.72 * scale, 0.35 * scale); c2.castShadow = true; g.add(c2);
+      g.position.set(p.x, y, p.y);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * scale, 0.22 * scale, 1.7 * scale, 7), trunkMat);
+      trunk.position.y = 0.85 * scale; trunk.castShadow = true; g.add(trunk);
+      const c1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.35 * scale, 1), leafMat1);
+      c1.position.set(0, 2.55 * scale, 0); c1.scale.set(1.15, 0.9, 1.15); c1.castShadow = true; g.add(c1);
+      const c2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.95 * scale, 1), leafMat2);
+      c2.position.set(0.6 * scale, 2.15 * scale, 0.4 * scale); c2.castShadow = true; g.add(c2);
       envGroup.add(g);
     }
-    [[-4.6, -3.5, 1.05], [5.5, -4.2, 0.95], [15.5, -4.0, 1.0], [24.2, -2.5, 1.15], [29.2, 3.5, 1.0]].forEach(
-      ([x, z, s]) => addTree(x, z, s)
-    );
+    // Grand cèdre / feuillus en bordure Est & Nord-Ouest (visibles sur la photo drone)
+    addTreeUV(-12.5, -2.5, 1.95);
+    addTreeUV(-18.5, -2.2, 1.25);
+    addTreeUV(-19.0, 22.0, 1.15);
 
-    // Boussole Nord minimale alignée sur la flèche N du plan (~22° antihoraire depuis le haut du plan)
+    // Petits arbustes ornementaux dans les massifs de galets blancs devant la terrasse
+    [
+      planToUV(1.2, 13.6), planToUV(10.5, 13.6), planToUV(12.8, 13.4),
+      { u: 7.4, v: 21.8 }, { u: 8.8, v: 21.2 }, { u: 8.5, v: 22.4 }
+    ].forEach(({ u, v }) => {
+      const p = uvToPlan(u, v);
+      const y = getTerrainHeight(p.x, p.y);
+      const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 1), shrubMat);
+      bush.position.set(p.x, y + 0.24, p.y);
+      bush.scale.set(1.1, 0.78, 1.1);
+      bush.castShadow = true;
+      envGroup.add(bush);
+    });
+
+    // Boussole Nord minimale placée dans la pelouse Nord-Ouest
+    const compassPos = uvToPlan(-17.5, 19.5);
     {
       const compass = new THREE.Group();
-      const cx = -3.4, cz = 19.6;
-      compass.position.set(cx, getTerrainHeight(cx, cz) + 0.08, cz);
-      compass.rotation.y = 0.384; // ~22° CCW
+      compass.position.set(compassPos.x, getTerrainHeight(compassPos.x, compassPos.y) + 0.08, compassPos.y);
+      compass.rotation.y = 0.384; // ~22° CCW conformément au plan
 
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(1.10, 1.26, 32),
@@ -1926,9 +2157,13 @@
       return { el, pos: r.pos };
     });
 
+    const aveLabelPt   = uvToPlan(45.2, 19.6);
+    const alleyLabelPt = uvToPlan(28.5, 20.0);
+    const northLabelPt = uvToPlan(-19.0, 19.2);
     const envLabels = [
-      { text: 'Avenue de V — Commune de S', pos: new THREE.Vector3(25.2, -1.35, 22.0), cls: 'bg-slate-900/85 text-slate-200 border-slate-600/60' },
-      { text: 'N', pos: new THREE.Vector3(-4.0, -0.35, 18.2), cls: 'bg-orange-600/90 text-white border-orange-400/60 font-bold' }
+      { text: 'Avenue de V — Commune de S', pos: new THREE.Vector3(aveLabelPt.x, getTerrainHeight(aveLabelPt.x, aveLabelPt.y) + 0.6, aveLabelPt.y), cls: 'bg-slate-900/85 text-slate-200 border-slate-600/60' },
+      { text: 'Allée cailloux (Parcelles 286 & 93)', pos: new THREE.Vector3(alleyLabelPt.x, getTerrainHeight(alleyLabelPt.x, alleyLabelPt.y) + 0.5, alleyLabelPt.y), cls: 'bg-slate-900/80 text-slate-300 border-slate-600/50' },
+      { text: 'N', pos: new THREE.Vector3(northLabelPt.x, getTerrainHeight(northLabelPt.x, northLabelPt.y) + 0.35, northLabelPt.y), cls: 'bg-orange-600/90 text-white border-orange-400/60 font-bold' }
     ].map(item => {
       const el = document.createElement('div');
       el.className = `room-label px-2 py-0.5 rounded-md text-[10px] border shadow-sm ${item.cls}`;
@@ -2218,13 +2453,13 @@
     }
 
     function build3MF(data) {
-      const contentTypes = `<?xml version="1.0" encoding="UTF-8"?>
+      const contentTypes = `\x3c?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
   <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml" />
 </Types>`;
 
-      const rels = `<?xml version="1.0" encoding="UTF-8"?>
+      const rels = `\x3c?xml version="1.0" encoding="UTF-8"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" />
 </Relationships>`;
@@ -2278,7 +2513,7 @@ ${tLines.join('\n')}
         itemsXML.push(`    <item objectid="${objId}" />`);
       });
 
-      const modelXML = `<?xml version="1.0" encoding="UTF-8"?>
+      const modelXML = `\x3c?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="fr-FR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <metadata name="Title">Maison S - Commune de S</metadata>
   <metadata name="Application">Maquette 3D Web</metadata>
@@ -2367,8 +2602,11 @@ ${itemsXML.join('\n')}
       envGroup.visible = showTerrainEnv;
       updateAllLabels();
     });
-    document.getElementById('toggle-evening').addEventListener('change', e => {
-      setEveningMode(e.target.checked);
+    document.getElementById('toggle-int-doors').addEventListener('change', e => {
+      interiorDoorsGroup.visible = e.target.checked;
+    });
+    document.querySelectorAll('.time-btn').forEach(btn => {
+      btn.addEventListener('click', () => setDayNightMode(btn.dataset.time === 'night'));
     });
     document.getElementById('toggle-tilegrid').addEventListener('change', e => {
       terraceGridGroup.visible = e.target.checked;
@@ -2467,10 +2705,20 @@ ${itemsXML.join('\n')}
       updateAllLabels();
     }
 
-    window.onload = () => {
-      refreshPrintReadout();
-      animate();
-    };
+    function initApp() {
+      try {
+        refreshPrintReadout();
+        animate();
+      } catch (err) {
+        console.error("Erreur lors de l'initialisation 3D :", err);
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      initApp();
+    } else {
+      window.addEventListener('load', initApp);
+    }
   </script>
 </body>
 </html>
