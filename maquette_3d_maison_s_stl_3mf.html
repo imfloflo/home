@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maison S 3D — Modélisation & Export Impression 3D (STL / 3MF)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #dce9f5;
+      user-select: none;
+    }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      box-shadow: 0 12px 36px -8px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 999px;
+    }
+    .room-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      white-space: nowrap;
+      transition: opacity 0.2s ease;
+    }
+    input[type="range"] {
+      accent-color: #c2410c;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease;
+    }
+    .toggle-input:checked + .toggle-switch {
+      background: #c2410c;
+    }
+    .toggle-input:checked + .toggle-switch::after {
+      transform: translateX(16px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Conteneur WebGL Three.js -->
+  <div id="canvas-container"></div>
+
+  <!-- Calque des étiquettes de pièces projetées en 2D -->
+  <div id="labels-layer" class="fixed inset-0 pointer-events-none overflow-hidden z-10"></div>
+
+  <!-- Badge d'en-tête principal -->
+  <header class="fixed top-3 left-3 right-16 sm:right-auto z-20 pointer-events-none flex flex-col gap-1.5">
+    <div class="glass-panel pointer-events-auto rounded-2xl px-4 py-2.5 flex items-center gap-3 max-w-full">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-600 to-amber-700 text-white flex items-center justify-center shadow-sm shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5M9 21v-6h6v6" />
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-xs sm:text-sm font-bold text-slate-800 truncate">
+          Maison S — Avenue de V
+        </h1>
+        <p class="text-[11px] text-slate-600 truncate">
+          142,52 m² hab. + 38,40 m² garage • 25,55 × 13,31 m • Faîtage 4,77 m
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Bouton mobile / repli du panneau latéral -->
+  <button
+    id="btn-toggle-sidebar"
+    type="button"
+    title="Afficher / masquer les contrôles"
+    class="fixed top-3 right-3 z-30 glass-panel rounded-xl p-2.5 text-slate-700 hover:text-orange-700 hover:bg-white transition active:scale-95"
+  >
+    <svg id="icon-sidebar-open" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+
+  <!-- Barre latérale flottante glassmorphique -->
+  <aside
+    id="sidebar"
+    class="fixed top-16 right-3 bottom-3 z-20 w-[calc(100vw-1.5rem)] max-w-[335px] glass-panel rounded-2xl flex flex-col overflow-hidden transition-all duration-300"
+  >
+    <div class="custom-scroll overflow-y-auto p-3.5 space-y-4 flex-1">
+      <!-- 1. Contrôle de la Toiture -->
+      <section class="space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-7 9 7M5 10v10h14V10" />
+            </svg>
+            Toiture (4 pans • 36 %)
+          </h2>
+          <span id="roof-status-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+            Affichée
+          </span>
+        </div>
+        <div class="grid grid-cols-4 gap-1 bg-slate-200/70 p-1 rounded-xl" id="roof-controls">
+          <button data-roof="show" class="roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition bg-white text-orange-700 shadow-sm">
+            Afficher
+          </button>
+          <button data-roof="lift" class="roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition text-slate-600 hover:text-slate-900">
+            Soulever
+          </button>
+          <button data-roof="xray" class="roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition text-slate-600 hover:text-slate-900">
+            Transp.
+          </button>
+          <button data-roof="hide" class="roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition text-slate-600 hover:text-slate-900">
+            Masquer
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. Vues rapides -->
+      <section class="space-y-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Vues rapides
+        </h2>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button data-cam="iso" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 hover:border-orange-300 transition text-left shadow-sm">
+            Vue 3D Principale
+          </button>
+          <button data-cam="front" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 hover:border-orange-300 transition text-left shadow-sm">
+            Façade Sud-Est
+          </button>
+          <button data-cam="back" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 hover:border-orange-300 transition text-left shadow-sm">
+            Façade Nord-Ouest
+          </button>
+          <button data-cam="top" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-orange-50/90 hover:bg-orange-100/90 border border-orange-200 text-orange-800 transition text-left shadow-sm">
+            Plan Intérieur
+          </button>
+          <button data-cam="terrace" class="cam-btn col-span-2 px-2.5 py-2 rounded-xl text-xs font-medium bg-white/80 hover:bg-white border border-slate-200/80 text-slate-700 hover:border-orange-300 transition text-center shadow-sm">
+            Terrasse & Baies Salon
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. Calques & Éclairage solaire -->
+      <section class="space-y-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Calques & Soleil
+        </h2>
+        <div class="bg-white/65 rounded-xl p-2.5 border border-slate-200/70 space-y-2.5">
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium">
+            <span>Terrain & Accès</span>
+            <input type="checkbox" id="toggle-terrain" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium">
+            <span>Terrasse en L</span>
+            <input type="checkbox" id="toggle-terrace" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium">
+            <span>Mobilier & Voitures</span>
+            <input type="checkbox" id="toggle-furniture" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium">
+            <span>Végétation & Clôtures</span>
+            <input type="checkbox" id="toggle-vegetation" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium">
+            <span>Étiquettes des pièces</span>
+            <input type="checkbox" id="toggle-labels" class="toggle-input sr-only" />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium">
+            <span>Ombres portées</span>
+            <input type="checkbox" id="toggle-shadows" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
+
+          <div class="pt-1.5 border-t border-slate-200/80 space-y-1">
+            <div class="flex items-center justify-between text-[11px] font-medium text-slate-600">
+              <span>Heure du soleil</span>
+              <span id="sun-time-label" class="font-bold text-orange-700">14h30</span>
+            </div>
+            <input
+              type="range"
+              id="sun-slider"
+              min="8"
+              max="20"
+              step="0.25"
+              value="14.5"
+              class="w-full h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Panneau Impression 3D (STL & 3MF) -->
+      <section class="rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 text-white p-3.5 shadow-lg space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" />
+            </svg>
+            Impression 3D (STL / 3MF)
+          </h2>
+          <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/10 text-slate-200">Z-up • mm</span>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="print-part" class="block text-[11px] font-medium text-slate-300">
+            Pièces à exporter
+          </label>
+          <select
+            id="print-part"
+            class="w-full rounded-xl bg-slate-700/90 border border-slate-600 text-white text-xs px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="complete">Maison complète (Murs + Toit)</option>
+            <option value="body">Corps de maison seul (sans toit)</option>
+            <option value="roof">Toit seul (amovible à plat)</option>
+            <option value="terrain">Maison + Terrasse + Socle Terrain</option>
+          </select>
+        </div>
+
+        <div class="space-y-1.5">
+          <label for="print-scale" class="block text-[11px] font-medium text-slate-300">
+            Échelle d'impression
+          </label>
+          <select
+            id="print-scale"
+            class="w-full rounded-xl bg-slate-700/90 border border-slate-600 text-white text-xs px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="100">1/100 (Maison ≈ 25,5 cm)</option>
+            <option value="150" selected>1/150 (Maison ≈ 17,0 cm)</option>
+            <option value="200">1/200 (Maison ≈ 12,8 cm)</option>
+            <option value="250">1/250 (Maison ≈ 10,2 cm)</option>
+          </select>
+        </div>
+
+        <!-- Dimensions calculées en temps réel -->
+        <div class="rounded-xl bg-white/10 px-3 py-2 flex items-center justify-between text-[11px]">
+          <span class="text-slate-300">Dimensions plateau :</span>
+          <span id="print-dims" class="font-mono font-semibold text-amber-200">-- × -- × -- mm</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-0.5">
+          <button
+            id="btn-export-stl"
+            type="button"
+            class="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs py-2.5 px-2 transition active:scale-95 shadow-md"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            .STL
+          </button>
+          <button
+            id="btn-export-3mf"
+            type="button"
+            class="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2.5 px-2 transition active:scale-95 shadow-md"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            .3MF
+          </button>
+        </div>
+        <p class="text-[10px] text-slate-400 leading-relaxed">
+          Solides fermés uniquement (sans vitrages, mobilier ni arbres). Orienté Z-up, posé à Z=0 mm. Le .3MF inclut les matériaux par sous-pièce.
+        </p>
+      </section>
+    </div>
+
+    <!-- Pied de barre d'aide souris -->
+    <div class="px-3.5 py-2 border-t border-slate-200/70 bg-white/50 text-[10px] text-slate-500 flex items-center justify-between">
+      <span>Clic gauche : Rotation</span>
+      <span>Molette : Zoom</span>
+      <span>Clic droit : Déplacer</span>
+    </div>
+  </aside>
+
+  <!-- Notification Toast -->
+  <div
+    id="toast"
+    class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-3 transition-all duration-300"
+  >
+    <div class="bg-slate-900/95 text-white px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-xs max-w-[92vw]">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+      <span id="toast-message">Export réussi</span>
+    </div>
+  </div>
+
+  <!-- Script Principal Three.js -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // 1. INITIALISATION DE LA SCÈNE, CAMÉRA & RENDU
+    // =========================================================================
+    const container = document.getElementById('canvas-container');
+    const labelsLayer = document.getElementById('labels-layer');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xdbe9f6);
+    scene.fog = new THREE.FogExp2(0xdbe9f6, 0.0052);
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 220);
+    camera.position.set(27.5, 16.5, 29.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.065;
+    controls.maxPolarAngle = Math.PI / 2 - 0.03;
+    controls.minDistance = 4.0;
+    controls.maxDistance = 85.0;
+    controls.target.set(12.2, 1.4, 6.2);
+    controls.update();
+
+    // =========================================================================
+    // 2. ÉCLAIRAGE DYNAMIQUE & CIEL PROCÉDURAL
+    // =========================================================================
+    const hemiLight = new THREE.HemisphereLight(0xf0f7ff, 0x7c8a6e, 0.72);
+    hemiLight.position.set(0, 40, 0);
+    scene.add(hemiLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff7e8, 2.15);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 2;
+    sunLight.shadow.camera.far = 95;
+    const dShadow = 28;
+    sunLight.shadow.camera.left = -dShadow;
+    sunLight.shadow.camera.right = dShadow;
+    sunLight.shadow.camera.top = dShadow;
+    sunLight.shadow.camera.bottom = -dShadow;
+    sunLight.shadow.bias = -0.0005;
+    sunLight.shadow.normalBias = 0.025;
+    scene.add(sunLight);
+    scene.add(sunLight.target);
+    sunLight.target.position.set(12.5, 0, 6.5);
+
+    const fillLight = new THREE.DirectionalLight(0xc9e0ff, 0.45);
+    fillLight.position.set(-22, 14, -18);
+    scene.add(fillLight);
+
+    function updateSunPosition(hour) {
+      // Orientation approximative : façade Sud-Est vers +Z/+X
+      const t = (hour - 8) / 12; // 0..1 entre 8h et 20h
+      const azimuth = THREE.MathUtils.lerp(-0.45, Math.PI + 0.35, t);
+      const elevation = Math.sin(t * Math.PI) * 0.92 + 0.16;
+      const dist = 42;
+
+      const cx = 12.5, cz = 6.5;
+      sunLight.position.set(
+        cx + Math.cos(azimuth) * Math.cos(elevation) * dist,
+        Math.sin(elevation) * dist,
+        cz + Math.sin(azimuth) * Math.cos(elevation) * dist
+      );
+
+      // Teinte chaude matin / soir, neutre à midi
+      const noonFactor = Math.sin(t * Math.PI);
+      const warmColor = new THREE.Color(0xffcfa0);
+      const dayColor = new THREE.Color(0xfffaf0);
+      sunLight.color.copy(warmColor).lerp(dayColor, Math.pow(noonFactor, 0.55));
+      sunLight.intensity = 1.35 + noonFactor * 1.05;
+
+      const skyDay = new THREE.Color(0xd8e8f7);
+      const skyGolden = new THREE.Color(0xf0dfd0);
+      const currentSky = skyGolden.clone().lerp(skyDay, Math.pow(noonFactor, 0.5));
+      scene.background.copy(currentSky);
+      scene.fog.color.copy(currentSky);
+    }
+    updateSunPosition(14.5);
+
+    // =========================================================================
+    // 3. TEXTURES PROCÉDURALES (ENDUIT GRATTÉ, TUILES CANAL ROUGES, CARRELAGE)
+    // =========================================================================
+    function createStuccoTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f2eee6';
+      ctx.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 16000; i++) {
+        const x = Math.random() * 256;
+        const y = Math.random() * 256;
+        const v = 225 + Math.floor(Math.random() * 25);
+        ctx.fillStyle = `rgb(${v},${v - 3},${v - 9})`;
+        ctx.fillRect(x, y, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(0.6, 0.6);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createTerracottaTileTextures() {
+      const w = 512, h = 512;
+      const colorCanvas = document.createElement('canvas');
+      colorCanvas.width = w;
+      colorCanvas.height = h;
+      const cCtx = colorCanvas.getContext('2d');
+
+      const bumpCanvas = document.createElement('canvas');
+      bumpCanvas.width = w;
+      bumpCanvas.height = h;
+      const bCtx = bumpCanvas.getContext('2d');
+
+      cCtx.fillStyle = '#9e3e24';
+      cCtx.fillRect(0, 0, w, h);
+      bCtx.fillStyle = '#505050';
+      bCtx.fillRect(0, 0, w, h);
+
+      const cols = 16;
+      const rows = 12;
+      const cw = w / cols;
+      const rh = h / rows;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = c * cw;
+          const y = r * rh;
+          // Légères variations naturelles de tuile béton canal rouge Auvergne
+          const tone = (Math.sin(r * 13.7 + c * 7.3) * 0.5 + 0.5);
+          const red = Math.round(166 + tone * 26);
+          const green = Math.round(64 + tone * 18);
+          const blue = Math.round(38 + tone * 12);
+
+          const grad = cCtx.createLinearGradient(x, y, x + cw, y);
+          grad.addColorStop(0.0, `rgb(${red - 45},${green - 20},${blue - 12})`);
+          grad.addColorStop(0.28, `rgb(${red + 12},${green + 8},${blue + 4})`);
+          grad.addColorStop(0.55, `rgb(${red},${green},${blue})`);
+          grad.addColorStop(0.85, `rgb(${red - 18},${green - 8},${blue - 5})`);
+          grad.addColorStop(1.0, `rgb(${red - 50},${green - 22},${blue - 14})`);
+          cCtx.fillStyle = grad;
+          cCtx.fillRect(x, y, cw, rh - 1.5);
+
+          // Ombre de recouvrement en bas de rangée
+          cCtx.fillStyle = 'rgba(42, 14, 6, 0.42)';
+          cCtx.fillRect(x, y + rh - 3.5, cw, 3.5);
+
+          // Relief Canal (onde sinusoïdale)
+          const bGrad = bCtx.createLinearGradient(x, y, x + cw, y);
+          bGrad.addColorStop(0.0, '#282828');
+          bGrad.addColorStop(0.35, '#e8e8e8');
+          bGrad.addColorStop(0.65, '#c8c8c8');
+          bGrad.addColorStop(1.0, '#222222');
+          bCtx.fillStyle = bGrad;
+          bCtx.fillRect(x, y, cw, rh - 2);
+          bCtx.fillStyle = '#181818';
+          bCtx.fillRect(x, y + rh - 3, cw, 3);
+        }
+      }
+
+      const map = new THREE.CanvasTexture(colorCanvas);
+      map.wrapS = map.wrapT = THREE.RepeatWrapping;
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.anisotropy = 8;
+
+      const bumpMap = new THREE.CanvasTexture(bumpCanvas);
+      bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+      bumpMap.anisotropy = 8;
+
+      return { map, bumpMap };
+    }
+
+    function createFloorTileTexture(baseHex = '#cfc4b2', groutHex = '#b2a693', gridCount = 8) {
+      const size = 256;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = baseHex;
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = groutHex;
+      ctx.lineWidth = 2;
+      const step = size / gridCount;
+      for (let i = 0; i <= gridCount; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * step, 0);
+        ctx.lineTo(i * step, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * step);
+        ctx.lineTo(size, i * step);
+        ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const stuccoTex = createStuccoTexture();
+    const tileTextures = createTerracottaTileTextures();
+    const bronzeFloorTex = createFloorTileTexture('#cec2af', '#b5a894', 6);
+    const terraceTileTex = createFloorTileTexture('#b8b5ae', '#9c9991', 5);
+
+    // =========================================================================
+    // 4. MATÉRIAUX ARCHITECTURAUX
+    // =========================================================================
+    const materials = {
+      extWall: new THREE.MeshStandardMaterial({
+        color: 0xf4f0e8,
+        map: stuccoTex,
+        roughness: 0.88,
+        metalness: 0.02
+      }),
+      intWall: new THREE.MeshStandardMaterial({
+        color: 0xf8f7f4,
+        roughness: 0.9,
+        metalness: 0.0
+      }),
+      slab: new THREE.MeshStandardMaterial({
+        color: 0xd9d4cb,
+        roughness: 0.85
+      }),
+      floorBronze: new THREE.MeshStandardMaterial({
+        map: bronzeFloorTex,
+        roughness: 0.58,
+        metalness: 0.06
+      }),
+      floorWood: new THREE.MeshStandardMaterial({
+        color: 0xc8a982,
+        roughness: 0.72
+      }),
+      floorGarage: new THREE.MeshStandardMaterial({
+        color: 0xa2a6ab,
+        roughness: 0.92
+      }),
+      anthracite: new THREE.MeshStandardMaterial({
+        color: 0x383e42, // RAL 7016 exact
+        roughness: 0.42,
+        metalness: 0.32
+      }),
+      windowSill: new THREE.MeshStandardMaterial({
+        color: 0xdfd9ce,
+        roughness: 0.78
+      }),
+      glass: new THREE.MeshPhysicalMaterial({
+        color: 0x6f98b0,
+        transparent: true,
+        opacity: 0.42,
+        roughness: 0.08,
+        metalness: 0.15,
+        reflectivity: 0.85,
+        depthWrite: false
+      }),
+      steelHandle: new THREE.MeshStandardMaterial({
+        color: 0xdce2e8,
+        roughness: 0.25,
+        metalness: 0.85
+      }),
+      roofTiles: new THREE.MeshStandardMaterial({
+        map: tileTextures.map,
+        bumpMap: tileTextures.bumpMap,
+        bumpScale: 0.055,
+        roughness: 0.78,
+        metalness: 0.04,
+        transparent: false,
+        opacity: 1.0
+      }),
+      roofRidge: new THREE.MeshStandardMaterial({
+        color: 0x8f331c,
+        roughness: 0.72,
+        transparent: false,
+        opacity: 1.0
+      }),
+      roofSoffit: new THREE.MeshStandardMaterial({
+        color: 0xf7f8fa,
+        roughness: 0.65,
+        transparent: false,
+        opacity: 1.0
+      }),
+      gutterAlu: new THREE.MeshStandardMaterial({
+        color: 0xcfd5dc,
+        roughness: 0.38,
+        metalness: 0.45,
+        transparent: false,
+        opacity: 1.0
+      }),
+      terraceTop: new THREE.MeshStandardMaterial({
+        map: terraceTileTex,
+        roughness: 0.78
+      }),
+      terracePlinth: new THREE.MeshStandardMaterial({
+        color: 0x8e9196,
+        roughness: 0.9
+      }),
+      driveway: new THREE.MeshStandardMaterial({
+        color: 0xc9c2b2,
+        roughness: 0.95
+      }),
+      asphalt: new THREE.MeshStandardMaterial({
+        color: 0x484d54,
+        roughness: 0.94
+      })
+    };
+
+    // =========================================================================
+    // 5. GROUPES HIÉRARCHIQUES (POUR CALQUES & EXPORT IMPRESSION 3D)
+    // =========================================================================
+    const houseRoot = new THREE.Group();
+    scene.add(houseRoot);
+
+    const bodyGroup = new THREE.Group();      // Dalle + murs extérieurs + cloisons + cadres (imprimables)
+    const roofGroup = new THREE.Group();      // Toiture solide étanche + gouttières (amovible / imprimable)
+    const glassGroup = new THREE.Group();     // Vitrages transparents (non imprimables)
+    const furnitureGroup = new THREE.Group(); // Mobilier intérieur + véhicules (non imprimables)
+    const terraceGroup = new THREE.Group();   // Terrasse en L (imprimable avec terrain ou maison)
+    const terrainGroup = new THREE.Group();   // Socle terrain en pente + cour + avenue (imprimable en mode socle)
+    const vegetationGroup = new THREE.Group();// Arbres, haies, clôtures, boussole (non imprimables)
+
+    houseRoot.add(bodyGroup, roofGroup, glassGroup, furnitureGroup, terraceGroup, terrainGroup, vegetationGroup);
+
+    // Utilitaire de marquage pour l'export 3D
+    function tagPrintable(mesh, partName, materialColorHex) {
+      mesh.userData.printable = true;
+      mesh.userData.partName = partName;
+      mesh.userData.printColor = materialColorHex;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    // =========================================================================
+    // 6. OUTILS GÉOMÉTRIQUES PRÉCIS (NORMALES SORTANTES & MURS À ONGLETS)
+    // =========================================================================
+    function addOrientedTri(positions, normals, uvs, a, b, c, expectedDir, uvScale = 0.25, uvMode = 'planar') {
+      const ab = new THREE.Vector3().subVectors(b, a);
+      const ac = new THREE.Vector3().subVectors(c, a);
+      const n = new THREE.Vector3().crossVectors(ab, ac);
+      let v1 = a, v2 = b, v3 = c;
+      if (n.dot(expectedDir) < 0) {
+        v2 = c;
+        v3 = b;
+        n.negate();
+      }
+      n.normalize();
+
+      positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+      normals.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
+
+      for (const v of [v1, v2, v3]) {
+        if (uvMode === 'roof') {
+          // Projection UV alignée avec la ligne de pente
+          uvs.push(v.x * uvScale, v.z * uvScale);
+        } else {
+          uvs.push((v.x + v.z) * uvScale, v.y * uvScale);
+        }
+      }
+    }
+
+    /**
+     * Crée un prisme trapézoïdal fermé à 6 faces (12 triangles, 100% étanche)
+     * permettant des joints d'angle parfaits à 90° et 45° sans superposition.
+     */
+    function createMiteredPrism(oA, oB, iA, iB, y0, y1) {
+      const p0 = new THREE.Vector3(oA.x, y0, oA.y);
+      const p1 = new THREE.Vector3(oB.x, y0, oB.y);
+      const p2 = new THREE.Vector3(iB.x, y0, iB.y);
+      const p3 = new THREE.Vector3(iA.x, y0, iA.y);
+
+      const q0 = new THREE.Vector3(oA.x, y1, oA.y);
+      const q1 = new THREE.Vector3(oB.x, y1, oB.y);
+      const q2 = new THREE.Vector3(iB.x, y1, iB.y);
+      const q3 = new THREE.Vector3(iA.x, y1, iA.y);
+
+      const center = new THREE.Vector3()
+        .add(p0).add(p1).add(p2).add(p3)
+        .add(q0).add(q1).add(q2).add(q3)
+        .multiplyScalar(0.125);
+
+      const positions = [];
+      const normals = [];
+      const uvs = [];
+
+      const addQuad = (a, b, c, d) => {
+        const fc = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25);
+        const dir = fc.sub(center);
+        addOrientedTri(positions, normals, uvs, a, b, c, dir, 0.35);
+        addOrientedTri(positions, normals, uvs, a, c, d, dir, 0.35);
+      };
+
+      // Extérieur, Intérieur, Extrémité A, Extrémité B, Haut, Bas
+      addQuad(p0, p1, q1, q0);
+      addQuad(p2, p3, q3, q2);
+      addQuad(p3, p0, q0, q3);
+      addQuad(p1, p2, q2, q1);
+      addQuad(q0, q1, q2, q3);
+      addQuad(p3, p2, p1, p0);
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      return geom;
+    }
+
+    /**
+     * Crée un polygone extrudé verticalement (en XZ -> Y de yBottom à yTop) 100% étanche.
+     */
+    function createVerticalPolygonSolid(pointsXZ, yBottom, yTop) {
+      const shapePts = pointsXZ.map(p => new THREE.Vector2(p[0], p[1]));
+      const tris = THREE.ShapeUtils.triangulateShape(shapePts, []);
+      const positions = [];
+      const normals = [];
+      const uvs = [];
+
+      const up = new THREE.Vector3(0, 1, 0);
+      const down = new THREE.Vector3(0, -1, 0);
+
+      for (const [i0, i1, i2] of tris) {
+        const aTop = new THREE.Vector3(pointsXZ[i0][0], yTop, pointsXZ[i0][1]);
+        const bTop = new THREE.Vector3(pointsXZ[i1][0], yTop, pointsXZ[i1][1]);
+        const cTop = new THREE.Vector3(pointsXZ[i2][0], yTop, pointsXZ[i2][1]);
+        addOrientedTri(positions, normals, uvs, aTop, bTop, cTop, up, 0.2, 'roof');
+
+        const aBot = new THREE.Vector3(pointsXZ[i0][0], yBottom, pointsXZ[i0][1]);
+        const bBot = new THREE.Vector3(pointsXZ[i1][0], yBottom, pointsXZ[i1][1]);
+        const cBot = new THREE.Vector3(pointsXZ[i2][0], yBottom, pointsXZ[i2][1]);
+        addOrientedTri(positions, normals, uvs, aBot, bBot, cBot, down, 0.2, 'roof');
+      }
+
+      // Calcul d'orientation globale (aire signée en XZ) pour déterminer la normale sortante des côtés
+      let area = 0;
+      for (let i = 0; i < pointsXZ.length; i++) {
+        const p = pointsXZ[i];
+        const q = pointsXZ[(i + 1) % pointsXZ.length];
+        area += (p[0] * q[1] - q[0] * p[1]);
+      }
+      const sign = area >= 0 ? 1 : -1;
+
+      for (let i = 0; i < pointsXZ.length; i++) {
+        const p = pointsXZ[i];
+        const q = pointsXZ[(i + 1) % pointsXZ.length];
+        const dx = q[0] - p[0];
+        const dz = q[1] - p[1];
+        const outDir = new THREE.Vector3(sign * dz, 0, -sign * dx).normalize();
+
+        const b0 = new THREE.Vector3(p[0], yBottom, p[1]);
+        const b1 = new THREE.Vector3(q[0], yBottom, q[1]);
+        const t1 = new THREE.Vector3(q[0], yTop, q[1]);
+        const t0 = new THREE.Vector3(p[0], yTop, p[1]);
+
+        addOrientedTri(positions, normals, uvs, b0, b1, t1, outDir, 0.35);
+        addOrientedTri(positions, normals, uvs, b0, t1, t0, outDir, 0.35);
+      }
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      return geom;
+    }
+
+    // Intersection de deux droites 2D (point + direction)
+    function intersectLines2D(p1, d1, p2, d2) {
+      const det = d1.x * d2.y - d1.y * d2.x;
+      if (Math.abs(det) < 1e-8) return p1.clone();
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const t = (dx * d2.y - dy * d2.x) / det;
+      return new THREE.Vector2(p1.x + d1.x * t, p1.y + d1.y * t);
+    }
+
+    // =========================================================================
+    // 7. CONCEPTION EXACTE DE LA MAISON (DALLE, MURS EXTÉRIEURS & MENUISERIES)
+    // =========================================================================
+    // Sommets exacts de l'emprise extérieure (sens horaire en vue de dessus XZ)
+    const outerPoly = [
+      new THREE.Vector2(0.00, 0.00),   // P0: Angle Nord-Ouest
+      new THREE.Vector2(17.05, 0.00),  // P1: Cassure 45° Nord-Est
+      new THREE.Vector2(25.55, 8.50),  // P2: Angle extrême Est
+      new THREE.Vector2(20.74, 13.31), // P3: Angle Sud du garage
+      new THREE.Vector2(15.35, 7.92),  // P4: Fond porche droite
+      new THREE.Vector2(12.90, 7.92),  // P5: Fond porche gauche
+      new THREE.Vector2(12.90, 9.36),  // P6: Angle entrée façade Sud-Est
+      new THREE.Vector2(0.00, 9.36)    // P7: Angle Sud-Ouest
+    ];
+
+    // Épaisseurs exactes par mur (0.30 m zone habitable, 0.20 m garage)
+    const wallThicknesses = [
+      0.30, // 0: Mur NW (0 -> 17.05)
+      0.26, // 1: Mur NE 45° (17.05 -> 25.55)
+      0.20, // 2: Mur Est garage 45° (25.55 -> 20.74)
+      0.20, // 3: Mur façade garage 45° (20.74 -> 15.35)
+      0.30, // 4: Mur fond de porche (15.35 -> 12.90)
+      0.30, // 5: Mur porte d'entrée (12.90 -> 12.90)
+      0.30, // 6: Mur façade SE (12.90 -> 0)
+      0.30  // 7: Mur façade SW (0 -> 0)
+    ];
+
+    // Calcul du polygone intérieur exact par intersections de parallèles (onglets parfaits)
+    const innerPoly = [];
+    for (let i = 0; i < outerPoly.length; i++) {
+      const prevIdx = (i - 1 + outerPoly.length) % outerPoly.length;
+      const pPrev = outerPoly[prevIdx];
+      const pCurr = outerPoly[i];
+      const pNext = outerPoly[(i + 1) % outerPoly.length];
+
+      const dPrev = new THREE.Vector2().subVectors(pCurr, pPrev).normalize();
+      const dCurr = new THREE.Vector2().subVectors(pNext, pCurr).normalize();
+
+      // Normale rentrante pour un polygone horaire en XZ (X droite, Z bas) : (-dy, dx)
+      const nPrev = new THREE.Vector2(-dPrev.y, dPrev.x);
+      const nCurr = new THREE.Vector2(-dCurr.y, dCurr.x);
+
+      const line1Pt = pCurr.clone().addScaledVector(nPrev, wallThicknesses[prevIdx]);
+      const line2Pt = pCurr.clone().addScaledVector(nCurr, wallThicknesses[i]);
+
+      innerPoly.push(intersectLines2D(line1Pt, dPrev, line2Pt, dCurr));
+    }
+
+    // Dalle de sol principale (incluant le porche couvert jusqu'à (16.79, 9.36))
+    const slabPoly = [
+      [0.00, 0.00],
+      [17.05, 0.00],
+      [25.55, 8.50],
+      [20.74, 13.31],
+      [16.79, 9.36],
+      [0.00, 9.36]
+    ];
+    const slabMesh = new THREE.Mesh(createVerticalPolygonSolid(slabPoly, -0.35, 0.00), materials.slab);
+    tagPrintable(slabMesh, 'Corps_Maison', '#EAE5DC');
+    bodyGroup.add(slabMesh);
+
+    // Soubassement vide sanitaire visuel uniquement pour le terrain en pente (évite que la maison flotte)
+    const foundationSkirt = new THREE.Mesh(createVerticalPolygonSolid(slabPoly, -1.25, -0.34), materials.terracePlinth);
+    tagPrintable(foundationSkirt, 'Socle_Terrain', '#7D8287');
+    terrainGroup.add(foundationSkirt);
+
+    // Liste exhaustive des 16 ouvertures exactes (selon plans Maisons Élan page 4 & 5)
+    // Chaque ouverture est référencée par indice de segment (0..7) et distance s0..s1 depuis P[i]
+    const wallOpenings = {
+      0: [ // Mur NW (Z=0, X: 0 -> 17.05)
+        { s0: 1.67,  s1: 2.67,  y0: 0.90, y1: 2.15, type: 'win1' },       // Chambre 1 (1.00×1.25)
+        { s0: 4.665, s1: 5.465, y0: 1.40, y1: 2.15, type: 'win1' },       // Bains (0.80×0.75)
+        { s0: 6.66,  s1: 7.06,  y0: 1.40, y1: 2.15, type: 'win1' },       // WC (0.40×0.75)
+        { s0: 8.085, s1: 9.085, y0: 0.90, y1: 2.15, type: 'win1' },       // Chambre 2 (1.00×1.25)
+        { s0: 11.58, s1: 13.58, y0: 1.20, y1: 2.15, type: 'win2' },       // Bureau (2.00×0.95)
+        { s0: 15.135,s1: 16.135,y0: 0.90, y1: 2.15, type: 'win1' }        // Chambre 3 (1.00×1.25)
+      ],
+      1: [ // Mur NE 45° (P1 -> P2, L=12.0208)
+        { s0: 3.75,  s1: 4.55,  y0: 1.20, y1: 2.15, type: 'win1' },       // Bains Suite (0.80×0.95)
+        { s0: 7.02,  s1: 7.92,  y0: 0.00, y1: 2.15, type: 'serviceDoor' } // Porte service garage (0.90×2.15)
+      ],
+      2: [ // Mur Est garage 45° (P2 -> P3, L=6.8024, distance depuis P3 = 2.69..3.89 => depuis P2 = 2.9124..4.1124)
+        { s0: 2.912, s1: 4.112, y0: 1.40, y1: 2.15, type: 'win1' }        // Fenêtre Garage (1.20×0.75)
+      ],
+      3: [ // Mur Façade Garage 45° (P3 -> P4, L=7.6226)
+        { s0: 0.70,  s1: 5.70,  y0: 0.00, y1: 2.15, type: 'garageDoor' }  // Porte garage double (5.00×2.15)
+      ],
+      4: [ // Mur fond porche (P4(15.35,7.92) -> P5(12.90,7.92), L=2.45)
+        { s0: 0.20,  s1: 0.75,  y0: 1.40, y1: 2.15, type: 'win1' },       // Cellier (X 14.60..15.15)
+        { s0: 1.80,  s1: 2.30,  y0: 1.40, y1: 2.15, type: 'win1' }        // WC Entrée (X 13.05..13.55)
+      ],
+      5: [ // Mur porte entrée (P5(12.90,7.92) -> P6(12.90,9.36), L=1.44)
+        { s0: 0.12,  s1: 1.02,  y0: 0.00, y1: 2.15, type: 'frontDoor' }   // Porte PE YSER (0.90×2.15)
+      ],
+      6: [ // Mur Façade SE (P6(12.90,9.36) -> P7(0,9.36), L=12.90)
+        { s0: 0.57,  s1: 1.17,  y0: 0.00, y1: 2.15, type: 'fixedTall' },  // Châssis fixe Entrée (0.60×2.15)
+        { s0: 2.79,  s1: 4.39,  y0: 1.20, y1: 2.15, type: 'win2' },       // Cuisine 2 vantaux (1.60×0.95)
+        { s0: 5.95,  s1: 8.75,  y0: 0.00, y1: 2.15, type: 'slider2' }     // Baie vitrée Séjour (2.80×2.15)
+      ],
+      7: [ // Mur Façade SW (P7(0,9.36) -> P0(0,0), L=9.36)
+        { s0: 1.57,  s1: 4.17,  y0: 0.00, y1: 2.15, type: 'slider2' }     // Baie vitrée Salon (2.60×2.15)
+      ]
+    };
+
+    const WALL_HEIGHT = 2.95;
+
+    /**
+     * Construit une menuiserie complète (dormant RAL 7016, appui de fenêtre,
+     * meneaux/vantaux, poignées et vitrage) dans l'ouverture exacte.
+     */
+    function buildOpeningDetails(pStart, uDir, nIn, thickness, op) {
+      const width = op.s1 - op.s0;
+      const height = op.y1 - op.y0;
+      const midS = (op.s0 + op.s1) * 0.5;
+      const centerXZ = pStart.clone()
+        .addScaledVector(uDir, midS)
+        .addScaledVector(nIn, thickness * 0.5);
+
+      const angleY = Math.atan2(-uDir.y, uDir.x);
+
+      const frameGroup = new THREE.Group();
+      frameGroup.position.set(centerXZ.x, op.y0, centerXZ.y);
+      frameGroup.rotation.y = angleY;
+      bodyGroup.add(frameGroup);
+
+      const glassHolder = new THREE.Group();
+      glassHolder.position.set(centerXZ.x, op.y0, centerXZ.y);
+      glassHolder.rotation.y = angleY;
+      glassGroup.add(glassHolder);
+
+      // En repère local : X = le long du mur, Y = hauteur (0..height), Z = vers l'intérieur (+nIn)
+      const addBox = (parent, w, h, d, x, y, z, mat, printable = true, colorHex = '#383E42') => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z);
+        if (printable) {
+          tagPrintable(m, 'Menuiseries', colorHex);
+        } else {
+          m.castShadow = false;
+          m.receiveShadow = false;
+        }
+        parent.add(m);
+        return m;
+      };
+
+      const frameD = 0.085;
+      const frameZ = thickness * 0.14; // Menuiserie posée en tableau / tunnel légèrement en retrait
+      const fThick = 0.055;
+
+      // Appui de fenêtre en béton/enduit si allège > 0
+      if (op.y0 > 0.05) {
+        addBox(
+          frameGroup,
+          width + 0.08,
+          0.065,
+          thickness + 0.07,
+          0,
+          0.02,
+          -0.025,
+          materials.windowSill,
+          true,
+          '#DFD9CE'
+        );
+      }
+
+      if (op.type === 'garageDoor') {
+        // Porte de garage sectionnelle 5.00 × 2.15 m à 4 panneaux horizontaux RAL 7016
+        addBox(frameGroup, fThick, height, 0.09, -width / 2 + fThick / 2, height / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, fThick, height, 0.09,  width / 2 - fThick / 2, height / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, width, fThick, 0.09, 0, height - fThick / 2, frameZ, materials.anthracite);
+
+        const panelW = width - fThick * 2 + 0.02;
+        const innerH = height - fThick;
+        const slats = 4;
+        const slatH = innerH / slats;
+        for (let k = 0; k < slats; k++) {
+          addBox(
+            frameGroup,
+            panelW,
+            slatH - 0.016,
+            0.055,
+            0,
+            k * slatH + slatH / 2,
+            frameZ + 0.025,
+            materials.anthracite
+          );
+        }
+        return;
+      }
+
+      if (op.type === 'frontDoor') {
+        // Porte d'entrée PE YSER Acier Anthracite 7016 + tierce vitrée verticale + barre de tirage inox
+        addBox(frameGroup, fThick, height, frameD, -width / 2 + fThick / 2, height / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, fThick, height, frameD,  width / 2 - fThick / 2, height / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, width, fThick, frameD, 0, height - fThick / 2, frameZ, materials.anthracite);
+
+        // Panneau gauche et droite autour de l'insert vitré vertical
+        const innerW = width - fThick * 2;
+        const innerH = height - fThick;
+        addBox(frameGroup, innerW * 0.62, innerH, 0.055, -innerW * 0.19, innerH / 2, frameZ + 0.01, materials.anthracite);
+        addBox(frameGroup, innerW * 0.24, innerH, 0.055,  innerW * 0.38, innerH / 2, frameZ + 0.01, materials.anthracite);
+        addBox(frameGroup, innerW * 0.16, 0.25, 0.055, innerW * 0.19, 0.125, frameZ + 0.01, materials.anthracite);
+        addBox(frameGroup, innerW * 0.16, 0.20, 0.055, innerW * 0.19, innerH - 0.10, frameZ + 0.01, materials.anthracite);
+
+        // Barre de tirage verticale inox (côté extérieur -Z)
+        addBox(frameGroup, 0.028, 0.95, 0.035, -0.22, 1.12, frameZ - 0.045, materials.steelHandle, false);
+
+        // Fente vitrée
+        addBox(glassHolder, innerW * 0.15, innerH - 0.44, 0.016, innerW * 0.19, innerH / 2 + 0.025, frameZ + 0.01, materials.glass, false);
+        return;
+      }
+
+      if (op.type === 'serviceDoor') {
+        // Porte de service garage pleine Anthracite 7016
+        addBox(frameGroup, fThick, height, frameD, -width / 2 + fThick / 2, height / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, fThick, height, frameD,  width / 2 - fThick / 2, height / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, width, fThick, frameD, 0, height - fThick / 2, frameZ, materials.anthracite);
+        addBox(frameGroup, width - fThick * 2 + 0.01, height - fThick, 0.05, 0, (height - fThick) / 2, frameZ + 0.01, materials.anthracite);
+        addBox(frameGroup, 0.13, 0.025, 0.04, -0.26, 1.02, frameZ - 0.04, materials.steelHandle, false);
+        return;
+      }
+
+      // Cadre périphérique complet (fenêtres & baies vitrées)
+      addBox(frameGroup, fThick, height, frameD, -width / 2 + fThick / 2, height / 2, frameZ, materials.anthracite);
+      addBox(frameGroup, fThick, height, frameD,  width / 2 - fThick / 2, height / 2, frameZ, materials.anthracite);
+      addBox(frameGroup, width, fThick, frameD, 0, height - fThick / 2, frameZ, materials.anthracite);
+      addBox(frameGroup, width, fThick, frameD, 0, fThick / 2, frameZ, materials.anthracite);
+
+      // Meneau central pour 2 vantaux et baies coulissantes
+      if (op.type === 'win2' || op.type === 'slider2') {
+        const mullionW = op.type === 'slider2' ? 0.065 : 0.055;
+        addBox(frameGroup, mullionW, height - fThick * 2, frameD * 0.9, 0, height / 2, frameZ, materials.anthracite);
+      }
+
+      // Vitrage teinté semi-transparent (exclu de l'impression 3D pour garder des ouvertures nettes)
+      addBox(
+        glassHolder,
+        width - fThick * 1.6,
+        height - fThick * 1.6,
+        0.018,
+        0,
+        height / 2,
+        frameZ,
+        materials.glass,
+        false
+      );
+    }
+
+    // Construction de chacun des 8 murs extérieurs avec réservations réelles en 3D
+    for (let i = 0; i < outerPoly.length; i++) {
+      const pA = outerPoly[i];
+      const pB = outerPoly[(i + 1) % outerPoly.length];
+      const qA = innerPoly[i];
+      const qB = innerPoly[(i + 1) % outerPoly.length];
+      const thick = wallThicknesses[i];
+
+      const segVec = new THREE.Vector2().subVectors(pB, pA);
+      const segLen = segVec.length();
+      const uDir = segVec.clone().divideScalar(segLen);
+      const nIn = new THREE.Vector2(-uDir.y, uDir.x);
+
+      // Helper : retourne les points extérieur et intérieur à une abscisse s le long du mur
+      const getPairAt = (s) => {
+        if (s <= 1e-4) return { o: pA, i: qA };
+        if (s >= segLen - 1e-4) return { o: pB, i: qB };
+        const oPt = pA.clone().addScaledVector(uDir, s);
+        const iPt = oPt.clone().addScaledVector(nIn, thick);
+        return { o: oPt, i: iPt };
+      };
+
+      const ops = (wallOpenings[i] || []).slice().sort((a, b) => a.s0 - b.s0);
+      let cursor = 0;
+
+      for (const op of ops) {
+        // Trumeau plein avant l'ouverture
+        if (op.s0 > cursor + 0.005) {
+          const a = getPairAt(cursor);
+          const b = getPairAt(op.s0);
+          const m = new THREE.Mesh(createMiteredPrism(a.o, b.o, a.i, b.i, 0, WALL_HEIGHT), materials.extWall);
+          tagPrintable(m, 'Corps_Maison', '#F4F0E8');
+          bodyGroup.add(m);
+        }
+
+        const opA = getPairAt(op.s0);
+        const opB = getPairAt(op.s1);
+
+        // Allège sous la fenêtre
+        if (op.y0 > 0.005) {
+          const sillWall = new THREE.Mesh(createMiteredPrism(opA.o, opB.o, opA.i, opB.i, 0, op.y0), materials.extWall);
+          tagPrintable(sillWall, 'Corps_Maison', '#F4F0E8');
+          bodyGroup.add(sillWall);
+        }
+
+        // Linteau au-dessus de l'ouverture
+        if (op.y1 < WALL_HEIGHT - 0.005) {
+          const lintelWall = new THREE.Mesh(createMiteredPrism(opA.o, opB.o, opA.i, opB.i, op.y1, WALL_HEIGHT), materials.extWall);
+          tagPrintable(lintelWall, 'Corps_Maison', '#F4F0E8');
+          bodyGroup.add(lintelWall);
+        }
+
+        // Menuiserie 3D complète
+        buildOpeningDetails(pA, uDir, nIn, thick, op);
+        cursor = op.s1;
+      }
+
+      // Trumeau final jusqu'à l'angle suivant
+      if (segLen > cursor + 0.005) {
+        const a = getPairAt(cursor);
+        const b = getPairAt(segLen);
+        const m = new THREE.Mesh(createMiteredPrism(a.o, b.o, a.i, b.i, 0, WALL_HEIGHT), materials.extWall);
+        tagPrintable(m, 'Corps_Maison', '#F4F0E8');
+        bodyGroup.add(m);
+      }
+    }
+
+    // Descentes d'eaux pluviales (EP 80) aux angles du plan (attachées aux façades)
+    const downspoutCoords = [
+      [-0.08, -0.08],
+      [17.08, -0.08],
+      [25.63, 8.50],
+      [12.82, 9.44],
+      [-0.08, 9.44]
+    ];
+    for (const [dx, dz] of downspoutCoords) {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 2.86, 10), materials.gutterAlu);
+      pipe.position.set(dx, 1.43, dz);
+      pipe.castShadow = true;
+      pipe.receiveShadow = true;
+      // Non inclus dans l'export 3D pour éviter des tiges trop fines cassantes à petite échelle
+      bodyGroup.add(pipe);
+    }
+
+    // =========================================================================
+    // 8. TOITURE 4 PANS À 36 % AVEC AILE 45° — SOLIDE FERMÉ ET ÉTANCHE
+    // =========================================================================
+    // Sommets exacts des égouts (Y = 2.955 haut rive, Y = 2.84 sous-face PVC blanc)
+    const Y_EAVE = 2.955;
+    const Y_SOFFIT = 2.84;
+
+    const E_XZ = [
+      [-0.35,  -0.35],  // E0: NW
+      [17.195, -0.35],  // E1: NE bend
+      [26.045,  8.50],  // E2: Far-East
+      [20.74,  13.805], // E3: South garage
+      [16.645,  9.71],  // E4: Concave valley (noue)
+      [-0.35,   9.71]   // E5: SW
+    ];
+
+    const ETop = E_XZ.map(([x, z]) => new THREE.Vector3(x, Y_EAVE, z));
+    const EBot = E_XZ.map(([x, z]) => new THREE.Vector3(x, Y_SOFFIT, z));
+
+    // Sommets exacts des faîtages & arêtiers (pente uniforme 36 %)
+    const R0 = new THREE.Vector3(4.68,   4.766, 4.68);
+    const R1 = new THREE.Vector3(15.112, 4.766, 4.68);
+    const R2 = new THREE.Vector3(18.199, 4.305, 5.959);
+    const R3 = new THREE.Vector3(20.74,  4.305, 8.50);
+
+    // 6 pans plans de toiture (décomposés en triangles avec UVs alignés à la ligne de pente)
+    const roofPos = [];
+    const roofNorm = [];
+    const roofUV = [];
+
+    function addRoofSlopeFace(verts, eaveStart, eaveEnd) {
+      // Base locale du pan : axe U = le long de l'égout, axe V = remontant la pente
+      const uAxis = new THREE.Vector3().subVectors(eaveEnd, eaveStart).normalize();
+      const upRef = new THREE.Vector3(0, 1, 0);
+      // Triangulation en éventail (tous les pans sont convexes : triangles, trapèzes ou pentagones convexes)
+      const nExpected = new THREE.Vector3(0, 1, 0);
+      const tileScaleU = 0.42;
+      const tileScaleV = 0.42;
+
+      for (let k = 1; k < verts.length - 1; k++) {
+        const a = verts[0], b = verts[k], c = verts[k + 1];
+        const ab = new THREE.Vector3().subVectors(b, a);
+        const ac = new THREE.Vector3().subVectors(c, a);
+        const n = new THREE.Vector3().crossVectors(ab, ac);
+        let v1 = a, v2 = b, v3 = c;
+        if (n.dot(nExpected) < 0) {
+          v2 = c;
+          v3 = b;
+          n.negate();
+        }
+        n.normalize();
+
+        // Vecteur remontant la pente perpendiculaire à l'égout dans le plan du pan
+        const vAxis = new THREE.Vector3().crossVectors(n, uAxis).normalize();
+        if (vAxis.y < 0) vAxis.negate();
+
+        roofPos.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+        roofNorm.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
+
+        for (const v of [v1, v2, v3]) {
+          const rel = new THREE.Vector3().subVectors(v, eaveStart);
+          roofUV.push(rel.dot(uAxis) * tileScaleU, rel.dot(vAxis) * tileScaleV);
+        }
+      }
+    }
+
+    // Les 6 pans exacts
+    addRoofSlopeFace([ETop[0], ETop[1], R1, R0],        ETop[0], ETop[1]); // 1. Pan Nord-Ouest
+    addRoofSlopeFace([ETop[5], ETop[0], R0],            ETop[5], ETop[0]); // 2. Croupe Ouest
+    addRoofSlopeFace([ETop[4], ETop[5], R0, R1, R2],    ETop[4], ETop[5]); // 3. Pan Sud-Est Principal
+    addRoofSlopeFace([ETop[1], ETop[2], R3, R2, R1],    ETop[1], ETop[2]); // 4. Pan Nord-Est 45°
+    addRoofSlopeFace([ETop[2], ETop[3], R3],            ETop[2], ETop[3]); // 5. Croupe Est Garage
+    addRoofSlopeFace([ETop[3], ETop[4], R2, R3],        ETop[3], ETop[4]); // 6. Pan Façade Garage
+
+    const roofTopGeom = new THREE.BufferGeometry();
+    roofTopGeom.setAttribute('position', new THREE.Float32BufferAttribute(roofPos, 3));
+    roofTopGeom.setAttribute('normal', new THREE.Float32BufferAttribute(roofNorm, 3));
+    roofTopGeom.setAttribute('uv', new THREE.Float32BufferAttribute(roofUV, 2));
+
+    const roofTopMesh = new THREE.Mesh(roofTopGeom, materials.roofTiles);
+    tagPrintable(roofTopMesh, 'Toiture', '#A84226');
+    roofGroup.add(roofTopMesh);
+
+    // Bandeau de rive vertical + sous-face PVC blanc fermant hermétiquement le volume de toiture
+    const soffitPos = [];
+    const soffitNorm = [];
+    const soffitUV = [];
+
+    // Bandeau de rive autour des 6 égouts
+    for (let i = 0; i < E_XZ.length; i++) {
+      const next = (i + 1) % E_XZ.length;
+      const p0 = EBot[i], p1 = EBot[next], p2 = ETop[next], p3 = ETop[i];
+      const dx = p1.x - p0.x;
+      const dz = p1.z - p0.z;
+      // Polygone E_XZ horaire => normale sortante = (dz, 0, -dx)
+      const outN = new THREE.Vector3(dz, 0, -dx).normalize();
+      addOrientedTri(soffitPos, soffitNorm, soffitUV, p0, p1, p2, outN, 0.3);
+      addOrientedTri(soffitPos, soffitNorm, soffitUV, p0, p2, p3, outN, 0.3);
+    }
+
+    // Sous-face horizontale fermée (triangulation exacte du polygone concave E0..E5)
+    const eaveShapePts = E_XZ.map(([x, z]) => new THREE.Vector2(x, z));
+    const soffitTris = THREE.ShapeUtils.triangulateShape(eaveShapePts, []);
+    const downVec = new THREE.Vector3(0, -1, 0);
+    for (const [i0, i1, i2] of soffitTris) {
+      addOrientedTri(soffitPos, soffitNorm, soffitUV, EBot[i0], EBot[i1], EBot[i2], downVec, 0.25, 'roof');
+    }
+
+    const roofShellBottomGeom = new THREE.BufferGeometry();
+    roofShellBottomGeom.setAttribute('position', new THREE.Float32BufferAttribute(soffitPos, 3));
+    roofShellBottomGeom.setAttribute('normal', new THREE.Float32BufferAttribute(soffitNorm, 3));
+    roofShellBottomGeom.setAttribute('uv', new THREE.Float32BufferAttribute(soffitUV, 2));
+
+    const roofSoffitMesh = new THREE.Mesh(roofShellBottomGeom, materials.roofSoffit);
+    tagPrintable(roofSoffitMesh, 'Toiture', '#F4F5F7');
+    roofGroup.add(roofSoffitMesh);
+
+    // Tuiles faîtières & arêtiers en relief
+    const ridgeSegments = [
+      [R0, R1], [R1, R2], [R2, R3],
+      [ETop[0], R0], [ETop[5], R0], [ETop[1], R1],
+      [ETop[2], R3], [ETop[3], R3]
+    ];
+    for (const [a, b] of ridgeSegments) {
+      const dir = new THREE.Vector3().subVectors(b, a);
+      const len = dir.length();
+      const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, len), materials.roofRidge);
+      cap.position.copy(mid);
+      cap.position.y += 0.02;
+      cap.lookAt(b.x, b.y + 0.02, b.z);
+      tagPrintable(cap, 'Toiture', '#8F331C');
+      roofGroup.add(cap);
+    }
+
+    // Noue métallique entre E4 et R2
+    {
+      const dir = new THREE.Vector3().subVectors(R2, ETop[4]);
+      const len = dir.length();
+      const mid = new THREE.Vector3().addVectors(ETop[4], R2).multiplyScalar(0.5);
+      const valley = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, len), materials.gutterAlu);
+      valley.position.copy(mid);
+      valley.position.y += 0.015;
+      valley.lookAt(R2.x, R2.y + 0.015, R2.z);
+      roofGroup.add(valley);
+    }
+
+    // Gouttières alu corniche tout autour des 6 égouts (alignées sur Y_SOFFIT pour impression à plat sans support)
+    for (let i = 0; i < E_XZ.length; i++) {
+      const a = ETop[i];
+      const b = ETop[(i + 1) % E_XZ.length];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len = Math.hypot(dx, dz);
+      const outN = new THREE.Vector3(dz, 0, -dx).normalize();
+      const mid = new THREE.Vector3((a.x + b.x) / 2, (Y_SOFFIT + Y_EAVE) / 2, (a.z + b.z) / 2)
+        .addScaledVector(outN, 0.065);
+
+      const gutter = new THREE.Mesh(new THREE.BoxGeometry(len + 0.14, 0.115, 0.11), materials.gutterAlu);
+      gutter.position.copy(mid);
+      gutter.rotation.y = Math.atan2(-dz, dx);
+      tagPrintable(gutter, 'Toiture', '#CFD5DC');
+      roofGroup.add(gutter);
+    }
+
+    // =========================================================================
+    // 9. AMÉNAGEMENT INTÉRIEUR COMPLET (CLOISONS 2,50 m, SOLS & MOBILIER)
+    // =========================================================================
+    const INT_H = 2.50;
+    const INT_T = 0.08;
+
+    /**
+     * Construit une cloison intérieure droite de (x1,z1) à (x2,z2) avec baies de portes éventuelles.
+     */
+    function addPartition(x1, z1, x2, z2, doors = [], thick = INT_T, height = INT_H) {
+      const pA = new THREE.Vector2(x1, z1);
+      const pB = new THREE.Vector2(x2, z2);
+      const vec = new THREE.Vector2().subVectors(pB, pA);
+      const len = vec.length();
+      if (len < 0.02) return;
+      const u = vec.clone().divideScalar(len);
+      const angle = Math.atan2(-u.y, u.x);
+
+      const sorted = doors.slice().sort((a, b) => a.s0 - b.s0);
+      let cursor = 0;
+
+      const placeBox = (sStart, sEnd, y0, y1) => {
+        const w = sEnd - sStart;
+        const h = y1 - y0;
+        if (w < 0.01 || h < 0.01) return;
+        const mid = pA.clone().addScaledVector(u, (sStart + sEnd) * 0.5);
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, thick), materials.intWall);
+        m.position.set(mid.x, y0 + h * 0.5, mid.y);
+        m.rotation.y = angle;
+        tagPrintable(m, 'Corps_Maison', '#F8F7F4');
+        bodyGroup.add(m);
+      };
+
+      for (const d of sorted) {
+        if (d.s0 > cursor) placeBox(cursor, d.s0, 0, height);
+        const doorTop = d.h || 2.04;
+        if (doorTop < height) placeBox(d.s0, d.s1, doorTop, height);
+        cursor = d.s1;
+      }
+      if (cursor < len) placeBox(cursor, len, 0, height);
+    }
+
+    // -- Revêtements de sol intérieurs (légèrement au-dessus de Y=0, non imprimables) --
+    function addFloorPatch(polyXZ, mat, yOffset = 0.006) {
+      const shape = new THREE.Shape(polyXZ.map(([x, z]) => new THREE.Vector2(x, -z)));
+      const geom = new THREE.ShapeGeometry(shape);
+      geom.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(geom, mat);
+      m.position.y = yOffset;
+      m.receiveShadow = true;
+      bodyGroup.add(m);
+    }
+
+    // Sol carrelage "Bronze" dans toute la partie habitable
+    addFloorPatch([
+      [0.28, 0.28], [16.95, 0.28], [21.12, 4.45], [16.70, 8.87],
+      [15.25, 7.62], [12.60, 7.62], [12.60, 9.08], [0.28, 9.08]
+    ], materials.floorBronze, 0.005);
+
+    // Parquet chaleureux dans les 3 chambres & bureau
+    addFloorPatch([[0.30, 0.30], [4.05, 0.30], [4.05, 3.88], [0.30, 3.88]], materials.floorWood, 0.009); // Ch1
+    addFloorPatch([[7.44, 0.30], [10.86, 0.30], [10.86, 3.88], [7.44, 3.88]], materials.floorWood, 0.009); // Ch2
+    addFloorPatch([[10.90, 0.30], [14.37, 0.30], [14.37, 4.41], [10.90, 4.41]], materials.floorWood, 0.009); // Bureau
+    addFloorPatch([[14.41, 0.30], [16.92, 0.30], [18.92, 2.30], [16.30, 4.92], [14.41, 4.41]], materials.floorWood, 0.009); // Ch3
+
+    // Sol béton lissé Garage (6.00 × 6.40 m à 45°)
+    const u45 = new THREE.Vector2(Math.SQRT1_2, Math.SQRT1_2);
+    const v45 = new THREE.Vector2(-Math.SQRT1_2, Math.SQRT1_2);
+    const pt45 = (su, sv) => new THREE.Vector2(17.05, 0)
+      .addScaledVector(u45, su)
+      .addScaledVector(v45, sv);
+
+    const gC0 = pt45(5.82, 0.24);
+    const gC1 = pt45(11.82, 0.24);
+    const gC2 = pt45(11.82, 6.60);
+    const gC3 = pt45(5.82, 6.60);
+    addFloorPatch([[gC0.x, gC0.y], [gC1.x, gC1.y], [gC2.x, gC2.y], [gC3.x, gC3.y]], materials.floorGarage, 0.008);
+
+    // -- Cloisons intérieures exactes selon le plan page 4 --
+    // Chambre 1 (X: 0.30..4.03, Z: 0.30..3.85)
+    addPartition(0.30, 3.88, 6.40, 3.88, []); // Séparation Ch1+Dgt / Pièce de vie (placards inclus)
+    addPartition(4.07, 0.30, 4.07, 3.88, [{ s0: 2.68, s1: 3.52 }]); // Ch1 / Bains & Dgt
+
+    // Bains (X: 4.11..6.30, Z: 0.30..2.50) & WC (X: 6.38..7.38, Z: 0.30..2.03)
+    addPartition(6.34, 0.30, 6.34, 2.50, []);
+    addPartition(4.07, 2.50, 6.34, 2.50, [{ s0: 0.85, s1: 1.68 }]); // Porte Bains
+    addPartition(6.34, 2.03, 7.42, 2.03, [{ s0: 0.14, s1: 0.94 }]); // Porte WC
+    addPartition(7.42, 0.30, 7.42, 3.88, [{ s0: 2.68, s1: 3.52 }]); // Dgt / Chambre 2
+    // Séparation Dgt / Pièce de vie avec porte PP 83
+    addPartition(6.40, 3.88, 7.42, 3.88, [{ s0: 0.08, s1: 0.92 }]);
+
+    // Chambre 2 (X: 7.46..10.84, Z: 0.30..3.85)
+    addPartition(7.42, 3.88, 10.88, 3.88, []);
+    addPartition(10.88, 0.30, 10.88, 4.41, []);
+
+    // Bureau (X: 10.92..14.35, Z: 0.30..4.41)
+    addPartition(10.88, 4.41, 14.39, 4.41, [{ s0: 2.25, s1: 3.08 }]); // Porte Bureau -> Entrée
+    addPartition(14.39, 0.30, 14.39, 4.41, []); // Bureau / Chambre 3
+
+    // Séparation Pièce de vie / Entrée (placard d'entrée)
+    addPartition(10.83, 5.95, 10.83, 9.06, []);
+    addPartition(10.83, 5.95, 11.65, 5.95, []);
+
+    // WC Entrée (X: 12.68..13.75, Z: 6.10..7.62)
+    addPartition(12.64, 6.10, 13.79, 6.10, []);
+    addPartition(12.64, 6.10, 12.64, 7.62, [{ s0: 0.25, s1: 1.08 }]); // Porte WC Entrée
+    addPartition(13.79, 5.10, 13.79, 7.62, []); // WC Entrée / Cellier
+
+    // Porte Entrée -> Cellier
+    addPartition(13.79, 5.10, 14.95, 5.10, [{ s0: 0.16, s1: 0.98 }]);
+
+    // Aile 45° : Mur porteur de séparation Garage / (Bains Suite + Dressing + Cellier) (épaisseur 0.20 m)
+    const gW0 = pt45(5.72, 0.22);
+    const gW1 = pt45(5.72, 6.62);
+    addPartition(gW0.x, gW0.y, gW1.x, gW1.y, [{ s0: 5.10, s1: 5.95 }], 0.20, WALL_HEIGHT);
+
+    // Cloison entre Chambre 3 et Bains Suite / Dressing (à s_u = 2.84)
+    const sW0 = pt45(2.84, 0.24);
+    const sW1 = pt45(2.84, 4.34);
+    addPartition(sW0.x, sW0.y, sW1.x, sW1.y, [{ s0: 2.35, s1: 3.18 }]); // Accès Chambre 3 -> Dressing
+
+    // Cloison entre Bains Suite et Dressing (à s_v = 1.90)
+    const bW0 = pt45(2.84, 1.90);
+    const bW1 = pt45(5.64, 1.90);
+    addPartition(bW0.x, bW0.y, bW1.x, bW1.y, [{ s0: 0.45, s1: 1.25 }]); // Porte Dressing -> Bains Suite
+
+    // Cloison entre Dressing et Cellier (à s_v = 4.34)
+    const dW0 = pt45(2.84, 4.34);
+    const dW1 = pt45(5.64, 4.34);
+    addPartition(dW0.x, dW0.y, dW1.x, dW1.y, []);
+
+    // Fermeture accès Chambre 3 depuis l'Entrée
+    const ch3DoorA = new THREE.Vector2(14.39, 4.41);
+    const ch3DoorB = pt45(2.84, 4.34);
+    addPartition(ch3DoorA.x, ch3DoorA.y, ch3DoorB.x, ch3DoorB.y, [{ s0: 0.25, s1: 1.08 }]);
+
+    // =========================================================================
+    // 10. MOBILIER STYLISÉ & VÉHICULES (TOGGLEABLE, NON IMPRIMABLE)
+    // =========================================================================
+    const matWood = new THREE.MeshStandardMaterial({ color: 0xb5895a, roughness: 0.7 });
+    const matFabric = new THREE.MeshStandardMaterial({ color: 0x62707d, roughness: 0.9 });
+    const matBed = new THREE.MeshStandardMaterial({ color: 0xedeae2, roughness: 0.85 });
+    const matBlanket = new THREE.MeshStandardMaterial({ color: 0x5c7c89, roughness: 0.88 });
+    const matCabinet = new THREE.MeshStandardMaterial({ color: 0xebe8e1, roughness: 0.55 });
+    const matCounter = new THREE.MeshStandardMaterial({ color: 0x45494e, roughness: 0.45 });
+    const matCeramic = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+
+    function addFurnBox(w, h, d, x, y, z, mat, rotY = 0) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      m.position.set(x, y, z);
+      m.rotation.y = rotY;
+      m.castShadow = true;
+      m.receiveShadow = true;
+      furnitureGroup.add(m);
+      return m;
+    }
+
+    function addBed(x, z, rotY = 0, w = 1.65, l = 2.05) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      g.rotation.y = rotY;
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(w, 0.28, l), matWood);
+      frame.position.y = 0.14;
+      const mattress = new THREE.Mesh(new THREE.BoxGeometry(w - 0.08, 0.22, l - 0.08), matBed);
+      mattress.position.y = 0.36;
+      const blanket = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, 0.06, l * 0.62), matBlanket);
+      blanket.position.set(0, 0.48, l * 0.16);
+      const pillow1 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 0.35), matCeramic);
+      pillow1.position.set(-w * 0.22, 0.52, -l * 0.34);
+      const pillow2 = pillow1.clone();
+      pillow2.position.x = w * 0.22;
+      [frame, mattress, blanket, pillow1, pillow2].forEach(o => { o.castShadow = true; o.receiveShadow = true; g.add(o); });
+      furnitureGroup.add(g);
+    }
+
+    // Lits dans Chambres 1, 2, 3
+    addBed(1.42, 1.85, Math.PI / 2, 1.55, 2.00);   // Chambre 1
+    addBed(9.65, 1.85, -Math.PI / 2, 1.55, 2.00);  // Chambre 2
+    addBed(15.70, 2.10, -Math.PI / 4, 1.75, 2.05); // Chambre 3 (suite parentale)
+
+    // Placards encastrés
+    addFurnBox(3.55, 2.25, 0.58, 2.15, 1.125, 3.55, matCabinet);
+    addFurnBox(2.05, 2.25, 0.58, 5.20, 1.125, 3.55, matCabinet);
+    addFurnBox(3.15, 2.25, 0.58, 9.15, 1.125, 3.55, matCabinet);
+    addFurnBox(0.65, 2.25, 2.80, 11.20, 1.125, 7.55, matCabinet);
+
+    // Salle de bains principale (baignoire + meuble vasque) & WC
+    addFurnBox(1.70, 0.55, 0.78, 5.25, 0.275, 0.72, matCeramic);
+    addFurnBox(1.05, 0.82, 0.50, 4.70, 0.41, 2.18, matCabinet);
+    addFurnBox(0.38, 0.42, 0.58, 6.88, 0.21, 0.65, matCeramic);
+    addFurnBox(0.38, 0.42, 0.58, 13.20, 0.21, 7.25, matCeramic);
+
+    // Bureau (bureau + fauteuil + banquette)
+    addFurnBox(0.78, 0.75, 1.80, 13.75, 0.375, 2.35, matWood);
+    addFurnBox(0.85, 0.75, 1.70, 11.45, 0.375, 2.35, matFabric);
+
+    // Cuisine en U (X: 7.45..10.65, Z: 5.85..8.98)
+    addFurnBox(0.66, 0.90, 3.15, 7.75, 0.45, 7.42, matCabinet);
+    addFurnBox(0.70, 0.05, 3.20, 7.75, 0.92, 7.42, matCounter);
+    addFurnBox(2.85, 0.90, 0.66, 9.20, 0.45, 8.68, matCabinet);
+    addFurnBox(2.90, 0.05, 0.70, 9.20, 0.92, 8.68, matCounter);
+    addFurnBox(0.66, 2.15, 2.75, 10.42, 1.075, 7.35, matCabinet); // Colonnes four/frigo
+    // Plaque de cuisson & évier
+    addFurnBox(0.55, 0.02, 0.65, 7.75, 0.955, 7.10, materials.anthracite);
+    addFurnBox(0.75, 0.03, 0.48, 9.25, 0.95, 8.68, materials.steelHandle);
+
+    // Table à manger + 6 chaises (Pièce de vie)
+    addFurnBox(1.05, 0.76, 2.25, 5.55, 0.38, 6.50, matWood);
+    for (let k = -1; k <= 1; k++) {
+      addFurnBox(0.42, 0.46, 0.42, 4.82, 0.23, 6.50 + k * 0.68, matFabric);
+      addFurnBox(0.42, 0.46, 0.42, 6.28, 0.23, 6.50 + k * 0.68, matFabric);
+    }
+
+    // Salon : grand canapé d'angle + table basse + meuble TV
+    addFurnBox(2.80, 0.42, 0.95, 2.35, 0.21, 4.65, matFabric);
+    addFurnBox(2.80, 0.76, 0.22, 2.35, 0.38, 4.28, matFabric);
+    addFurnBox(0.95, 0.42, 1.85, 3.28, 0.21, 5.95, matFabric);
+    addFurnBox(1.10, 0.34, 0.75, 1.95, 0.17, 6.35, matWood);
+    addFurnBox(2.35, 0.48, 0.46, 2.45, 0.24, 8.75, matWood);
+    addFurnBox(1.45, 0.82, 0.05, 2.45, 1.05, 8.92, materials.anthracite); // Écran TV
+
+    // Bains Suite Parentale & Dressing (orientés à 45°)
+    const shPt = pt45(5.10, 1.05);
+    addFurnBox(0.95, 0.08, 1.35, shPt.x, 0.04, shPt.y, matCeramic, -Math.PI / 4); // Douche italienne
+    const drPt1 = pt45(4.25, 2.28);
+    const drPt2 = pt45(4.25, 3.92);
+    addFurnBox(2.50, 2.15, 0.52, drPt1.x, 1.075, drPt1.y, matCabinet, -Math.PI / 4);
+    addFurnBox(2.50, 2.15, 0.52, drPt2.x, 1.075, drPt2.y, matCabinet, -Math.PI / 4);
+
+    // Cellier (lave-linge & sèche-linge)
+    const cePt = pt45(4.20, 4.78);
+    addFurnBox(1.30, 0.85, 0.62, cePt.x, 0.425, cePt.y, matCeramic, -Math.PI / 4);
+
+    // Silhouettes de 2 voitures stylisées dans le garage double (orientées à 45°)
+    function addStylizedCar(su, sv, bodyColor) {
+      const p = pt45(su, sv);
+      const car = new THREE.Group();
+      car.position.set(p.x, 0, p.y);
+      car.rotation.y = Math.PI / 4; // Capot face au mur fond garage
+      const cMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.35, metalness: 0.4 });
+      const lower = new THREE.Mesh(new THREE.BoxGeometry(1.82, 0.62, 4.30), cMat);
+      lower.position.y = 0.50;
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.56, 0.56, 2.25), cMat);
+      cabin.position.set(0, 1.04, -0.15);
+      const wMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.9 });
+      [[-0.86, 1.32], [0.86, 1.32], [-0.86, -1.32], [0.86, -1.32]].forEach(([wx, wz]) => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 14), wMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.32, wz);
+        car.add(wheel);
+      });
+      [lower, cabin].forEach(o => { o.castShadow = true; o.receiveShadow = true; car.add(o); });
+      furnitureGroup.add(car);
+    }
+    addStylizedCar(7.45, 3.65, 0x3b4d61);
+    addStylizedCar(9.95, 3.85, 0xb8bec7);
+
+    // =========================================================================
+    // 11. TERRASSE EN L, TERRAIN EN PENTE SOLIDE & AVENUE DE V
+    // =========================================================================
+    // Terrasse en L longeant la baie Salon (SW) et la baie Pièce de vie (SE)
+    const terracePoly = [
+      [-3.20,  3.80],
+      [ 0.00,  3.80],
+      [ 0.00,  9.36],
+      [12.90,  9.36],
+      [12.90, 12.56],
+      [-3.20, 12.56]
+    ];
+    // Dalle de terrasse (socle descendant dans la pente jusqu'à -1.05 m)
+    const terracePlinthMesh = new THREE.Mesh(createVerticalPolygonSolid(terracePoly, -1.05, -0.09), materials.terracePlinth);
+    tagPrintable(terracePlinthMesh, 'Terrasse', '#96999E');
+    terraceGroup.add(terracePlinthMesh);
+
+    const terraceTopMesh = new THREE.Mesh(createVerticalPolygonSolid(terracePoly, -0.09, -0.03), materials.terraceTop);
+    tagPrintable(terraceTopMesh, 'Terrasse', '#C4C0B8');
+    terraceGroup.add(terraceTopMesh);
+
+    // Fonction d'altitude exacte du terrain naturel (référentiel floor = 0 => +103.25 NGF)
+    // Données Plan de Masse : NW +0.55/+0.70 m, plateforme maison -0.15 m, cour -0.55 m, accès V -1.65 m
+    function isInsideHousePad(x, z) {
+      // Distance signée approximative vers la plateforme de maison (0..17.05, 0..9.36 + aile 45°)
+      const inRect = (x >= -0.8 && x <= 17.5 && z >= -0.8 && z <= 10.2);
+      const uVal = ((x - 17.05) + z) * Math.SQRT1_2;
+      const vVal = (-(x - 17.05) + z) * Math.SQRT1_2;
+      const inWing = (uVal >= -0.8 && uVal <= 12.8 && vVal >= -0.8 && vVal <= 7.6);
+      return inRect || inWing;
+    }
+
+    function getNaturalHeight(x, z) {
+      // Pente douce générale descendant du Nord-Ouest (X<0, Z<0) vers le Sud-Est (Avenue de V)
+      let h = 0.20 - 0.019 * x - 0.056 * z;
+      // Légère ondulation naturelle vers l'avenue de V au Sud-Est
+      if (z > 14) {
+        h -= (z - 14) * 0.035;
+      }
+      if (x > 24 && z > 10) {
+        h -= (x - 24) * 0.035;
+      }
+
+      // Plateforme nivelée (terrassement) autour de la maison autour de Y = -0.16 à -0.35
+      // Calcul d'une transition douce autour du rectangle englobant de la maison
+      const dx1 = Math.max(0, -0.6 - x, x - 17.2);
+      const dz1 = Math.max(0, -0.6 - z, z - 9.8);
+      const distRect = Math.hypot(dx1, dz1);
+
+      const uVal = ((x - 17.05) + z) * Math.SQRT1_2;
+      const vVal = (-(x - 17.05) + z) * Math.SQRT1_2;
+      const du = Math.max(0, 0.0 - uVal, uVal - 12.3);
+      const dv = Math.max(0, -0.6 - vVal, vVal - 7.1);
+      const distWing = Math.hypot(du, dv);
+
+      const distHouse = Math.min(distRect, distWing);
+      const padBlend = Math.exp(-(distHouse * distHouse) / 14.0);
+      const padTarget = -0.22 - Math.max(0, (z - 7.0) * 0.045);
+
+      h = THREE.MathUtils.lerp(h, padTarget, padBlend);
+
+      // Creusement léger strictement sous la dalle intérieure pour ne jamais percer le sol
+      if (isInsideHousePad(x, z) && distHouse < 0.05) {
+        h = Math.min(h, -0.36);
+      }
+
+      return THREE.MathUtils.clamp(h, -1.95, 0.78);
+    }
+
+    // Construction du bloc terrain solide et 100% étanche (maquette architecturale)
+    const TX_MIN = -7.5, TX_MAX = 31.5;
+    const TZ_MIN = -6.5, TZ_MAX = 24.5;
+    const TERRAIN_BASE_Y = -2.35;
+    const NX = 62, NZ = 50;
+
+    function buildSolidTerrainMesh() {
+      const grid = [];
+      for (let iz = 0; iz <= NZ; iz++) {
+        const row = [];
+        const z = THREE.MathUtils.lerp(TZ_MIN, TZ_MAX, iz / NZ);
+        for (let ix = 0; ix <= NX; ix++) {
+          const x = THREE.MathUtils.lerp(TX_MIN, TX_MAX, ix / NX);
+          row.push(new THREE.Vector3(x, getNaturalHeight(x, z), z));
+        }
+        grid.push(row);
+      }
+
+      const positions = [];
+      const normals = [];
+      const colors = [];
+
+      const grassLight = new THREE.Color(0x88ad67);
+      const grassDark  = new THREE.Color(0x739854);
+      const gravelCol  = new THREE.Color(0xcbc3b1);
+      const roadCol    = new THREE.Color(0x525861);
+      const skirtCol   = new THREE.Color(0x7c7469);
+
+      function getSurfaceColor(x, z) {
+        // Avenue de V : bande routière oblique au Sud-Est (bas-droite)
+        const roadDist = (x * 0.42 + z * 0.91) - 31.0;
+        if (roadDist > 0) return roadCol;
+
+        // Cour devant garage / porche + allée d'accès menant à l'Avenue de V
+        const inCourtyard = (x > 12.6 && x < 21.8 && z > 8.6 && z < 16.5 && (x - z) > 0.2 && (x - z) < 12.2);
+        // Allée d'accès de largeur ~4.2 m reliant la cour (17.5, 14.5) vers l'avenue (28.0, 22.5)
+        const ax = 17.2, az = 14.2, bx = 30.0, bz = 21.6;
+        const abx = bx - ax, abz = bz - az;
+        const abLen2 = abx * abx + abz * abz;
+        const tProj = THREE.MathUtils.clamp(((x - ax) * abx + (z - az) * abz) / abLen2, 0, 1);
+        const px = ax + abx * tProj;
+        const pz = az + abz * tProj;
+        const dDriveway = Math.hypot(x - px, z - pz);
+
+        if (inCourtyard || dDriveway < 2.25) {
+          return gravelCol;
+        }
+
+        const n = Math.sin(x * 0.35) * Math.cos(z * 0.35) * 0.5 + 0.5;
+        return grassDark.clone().lerp(grassLight, n);
+      }
+
+      const pushTri = (a, b, c, expectedDir, cA, cB, cC) => {
+        const ab = new THREE.Vector3().subVectors(b, a);
+        const ac = new THREE.Vector3().subVectors(c, a);
+        const n = new THREE.Vector3().crossVectors(ab, ac);
+        let v1 = a, v2 = b, v3 = c;
+        let k1 = cA, k2 = cB, k3 = cC;
+        if (n.dot(expectedDir) < 0) {
+          v2 = c; v3 = b;
+          k2 = cC; k3 = cB;
+          n.negate();
+        }
+        n.normalize();
+        positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+        normals.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
+        colors.push(k1.r, k1.g, k1.b, k2.r, k2.g, k2.b, k3.r, k3.g, k3.b);
+      };
+
+      const up = new THREE.Vector3(0, 1, 0);
+      // Surface supérieure
+      for (let iz = 0; iz < NZ; iz++) {
+        for (let ix = 0; ix < NX; ix++) {
+          const p00 = grid[iz][ix];
+          const p10 = grid[iz][ix + 1];
+          const p11 = grid[iz + 1][ix + 1];
+          const p01 = grid[iz + 1][ix];
+
+          const c00 = getSurfaceColor(p00.x, p00.z);
+          const c10 = getSurfaceColor(p10.x, p10.z);
+          const c11 = getSurfaceColor(p11.x, p11.z);
+          const c01 = getSurfaceColor(p01.x, p01.z);
+
+          pushTri(p00, p01, p11, up, c00, c01, c11);
+          pushTri(p00, p11, p10, up, c00, c11, c10);
+        }
+      }
+
+      // 4 jupes verticales fermées jusqu'à TERRAIN_BASE_Y
+      const addSkirtStrip = (pts, outDir) => {
+        for (let i = 0; i < pts.length - 1; i++) {
+          const t0 = pts[i];
+          const t1 = pts[i + 1];
+          const b0 = new THREE.Vector3(t0.x, TERRAIN_BASE_Y, t0.z);
+          const b1 = new THREE.Vector3(t1.x, TERRAIN_BASE_Y, t1.z);
+          pushTri(b0, b1, t1, outDir, skirtCol, skirtCol, skirtCol);
+          pushTri(b0, t1, t0, outDir, skirtCol, skirtCol, skirtCol);
+        }
+      };
+
+      addSkirtStrip(grid[0], new THREE.Vector3(0, 0, -1));
+      addSkirtStrip(grid[NZ], new THREE.Vector3(0, 0, 1));
+      addSkirtStrip(grid.map(r => r[0]), new THREE.Vector3(-1, 0, 0));
+      addSkirtStrip(grid.map(r => r[NX]), new THREE.Vector3(1, 0, 0));
+
+      // Face inférieure parfaitement plane à Y = TERRAIN_BASE_Y
+      const c0 = new THREE.Vector3(TX_MIN, TERRAIN_BASE_Y, TZ_MIN);
+      const c1 = new THREE.Vector3(TX_MAX, TERRAIN_BASE_Y, TZ_MIN);
+      const c2 = new THREE.Vector3(TX_MAX, TERRAIN_BASE_Y, TZ_MAX);
+      const c3 = new THREE.Vector3(TX_MIN, TERRAIN_BASE_Y, TZ_MAX);
+      const down = new THREE.Vector3(0, -1, 0);
+      pushTri(c0, c1, c2, down, skirtCol, skirtCol, skirtCol);
+      pushTri(c0, c2, c3, down, skirtCol, skirtCol, skirtCol);
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+      const mat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.94,
+        metalness: 0.0
+      });
+      const mesh = new THREE.Mesh(geom, mat);
+      tagPrintable(mesh, 'Socle_Terrain', '#7E9F62');
+      return mesh;
+    }
+
+    terrainGroup.add(buildSolidTerrainMesh());
+
+    // =========================================================================
+    // 12. VÉGÉTATION STYLISÉE, CLÔTURES DE PARCELLE & BOUSSOLE NORD 3D
+    // =========================================================================
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4f3a, roughness: 0.9 });
+    const leafMats = [
+      new THREE.MeshStandardMaterial({ color: 0x4f7d44, roughness: 0.85 }),
+      new THREE.MeshStandardMaterial({ color: 0x5f8f4e, roughness: 0.85 }),
+      new THREE.MeshStandardMaterial({ color: 0x3f6b3a, roughness: 0.88 })
+    ];
+
+    function addStylizedTree(x, z, scale = 1.0) {
+      const y = getNaturalHeight(x, z);
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * scale, 0.16 * scale, 1.35 * scale, 7), trunkMat);
+      trunk.position.y = 0.65 * scale;
+      trunk.castShadow = true;
+      g.add(trunk);
+
+      const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15 * scale, 1), leafMats[0]);
+      crown1.position.set(0, 2.05 * scale, 0);
+      crown1.scale.set(1.05, 0.92, 1.05);
+      crown1.castShadow = true;
+      g.add(crown1);
+
+      const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.75 * scale, 1), leafMats[1]);
+      crown2.position.set(0.55 * scale, 1.75 * scale, 0.35 * scale);
+      crown2.castShadow = true;
+      g.add(crown2);
+
+      vegetationGroup.add(g);
+    }
+
+    // Arbres et arbustes périphériques autour de la parcelle
+    [
+      [-5.2, -3.5, 1.15], [-4.8, 2.2, 0.9], [4.5, -4.6, 1.05],
+      [13.5, -4.4, 0.95], [23.8, -2.5, 1.2], [28.5, 3.2, 1.05],
+      [-5.4, 15.8, 1.1], [5.8, 19.2, 0.85], [11.2, 20.5, 0.95]
+    ].forEach(([x, z, s]) => addStylizedTree(x, z, s));
+
+    // Haies & clôtures fines le long des limites de propriété
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x5c646d, roughness: 0.6 });
+    const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x4b7440, roughness: 0.92 });
+
+    function addHedgeLine(x1, z1, x2, z2, steps = 12) {
+      for (let i = 0; i < steps; i++) {
+        const t = (i + 0.5) / steps;
+        const x = THREE.MathUtils.lerp(x1, x2, t);
+        const z = THREE.MathUtils.lerp(z1, z2, t);
+        const y = getNaturalHeight(x, z);
+        const segLen = Math.hypot(x2 - x1, z2 - z1) / steps;
+        const bush = new THREE.Mesh(new THREE.BoxGeometry(segLen * 1.02, 1.15, 0.62), hedgeMat);
+        bush.position.set(x, y + 0.52, z);
+        bush.rotation.y = Math.atan2(-(z2 - z1), x2 - x1);
+        bush.castShadow = true;
+        bush.receiveShadow = true;
+        vegetationGroup.add(bush);
+      }
+    }
+    addHedgeLine(-6.8, -5.8, 27.5, -5.8, 18);
+    addHedgeLine(-6.8, -5.8, -6.8, 18.5, 14);
+    addHedgeLine(29.8, -3.5, 29.8, 13.5, 10);
+
+    // Potelets de limite de propriété au Sud
+    for (let x = -6.8; x <= 14.0; x += 2.6) {
+      const z = 22.8;
+      const y = getNaturalHeight(x, z);
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.05, 0.08), fenceMat);
+      post.position.set(x, y + 0.50, z);
+      vegetationGroup.add(post);
+    }
+
+    // Boussole Nord 3D au sol (orientée conformément à la flèche Nord du plan page 4)
+    {
+      const compass = new THREE.Group();
+      const cx = -3.8, cz = 18.8;
+      compass.position.set(cx, getNaturalHeight(cx, cz) + 0.08, cz);
+      // Sur le plan page 4, le Nord pointe vers le haut-gauche (~335° => rotation +0.38 rad)
+      compass.rotation.y = 0.38;
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(1.15, 1.32, 32),
+        new THREE.MeshBasicMaterial({ color: 0x334155, side: THREE.DoubleSide })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      compass.add(ring);
+
+      const arrowShape = new THREE.Shape();
+      arrowShape.moveTo(0, 1.15);
+      arrowShape.lineTo(0.36, -0.55);
+      arrowShape.lineTo(0, -0.25);
+      arrowShape.lineTo(-0.36, -0.55);
+      arrowShape.closePath();
+      const arrowGeom = new THREE.ShapeGeometry(arrowShape);
+      arrowGeom.rotateX(-Math.PI / 2);
+      const arrow = new THREE.Mesh(arrowGeom, new THREE.MeshBasicMaterial({ color: 0xc2410c, side: THREE.DoubleSide }));
+      arrow.position.y = 0.02;
+      compass.add(arrow);
+
+      vegetationGroup.add(compass);
+    }
+
+    // =========================================================================
+    // 13. ÉTIQUETTES DES PIÈCES PROJETÉES EN 2D
+    // =========================================================================
+    const roomSpecs = [
+      { name: 'Chambre 1',     area: '12,00 m²', pos: new THREE.Vector3(2.15, 1.2, 2.05) },
+      { name: 'Bains',         area: '4,78 m²',  pos: new THREE.Vector3(5.20, 1.2, 1.35) },
+      { name: 'WC',            area: '1,73 m²',  pos: new THREE.Vector3(6.88, 1.2, 1.15) },
+      { name: 'Dégagement',    area: '4,93 m²',  pos: new THREE.Vector3(5.65, 1.2, 3.10) },
+      { name: 'Chambre 2',     area: '12,00 m²', pos: new THREE.Vector3(9.15, 1.2, 2.05) },
+      { name: 'Bureau',        area: '14,11 m²', pos: new THREE.Vector3(12.60, 1.2, 2.25) },
+      { name: 'Pièce de vie',  area: '55,00 m²', pos: new THREE.Vector3(5.40, 1.2, 6.60) },
+      { name: 'Entrée',        area: '9,94 m²',  pos: new THREE.Vector3(11.85, 1.2, 6.50) },
+      { name: 'WC',            area: '1,64 m²',  pos: new THREE.Vector3(13.20, 1.2, 6.85) },
+      { name: 'Cellier',       area: '7,98 m²',  pos: new THREE.Vector3(15.20, 1.2, 6.35) },
+      { name: 'Chambre 3',     area: '15,02 m²', pos: new THREE.Vector3(16.05, 1.2, 2.15) },
+      { name: 'Bains Suite',   area: '4,58 m²',  pos: new THREE.Vector3(pt45(4.3, 1.05).x, 1.2, pt45(4.3, 1.05).y) },
+      { name: 'Dressing',      area: '6,79 m²',  pos: new THREE.Vector3(pt45(4.3, 3.10).x, 1.2, pt45(4.3, 3.10).y) },
+      { name: 'Garage Double', area: '38,40 m²', pos: new THREE.Vector3(pt45(8.8, 3.40).x, 1.2, pt45(8.8, 3.40).y) }
+    ];
+
+    const labelElements = roomSpecs.map((r) => {
+      const el = document.createElement('div');
+      el.className = 'room-label bg-slate-900/80 backdrop-blur-sm text-white px-2 py-0.5 rounded-lg text-[10px] leading-tight shadow-md border border-white/15 text-center';
+      el.innerHTML = `<div class="font-semibold">${r.name}</div><div class="text-[9px] text-amber-300">${r.area}</div>`;
+      el.style.display = 'none';
+      labelsLayer.appendChild(el);
+      return { el, pos: r.pos };
+    });
+
+    let showLabels = false;
+    const projVec = new THREE.Vector3();
+
+    function updateRoomLabels() {
+      if (!showLabels) {
+        labelElements.forEach(item => { item.el.style.display = 'none'; });
+        return;
+      }
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      for (const item of labelElements) {
+        projVec.copy(item.pos).project(camera);
+        if (projVec.z > 1 || projVec.z < -1) {
+          item.el.style.display = 'none';
+          continue;
+        }
+        const x = (projVec.x * 0.5 + 0.5) * w;
+        const y = (-projVec.y * 0.5 + 0.5) * h;
+        item.el.style.display = 'block';
+        item.el.style.left = `${x}px`;
+        item.el.style.top = `${y}px`;
+      }
+    }
+
+    // =========================================================================
+    // 14. ANIMATION TOITURE & TRANSITIONS DE CAMÉRA FLUIDES
+    // =========================================================================
+    let roofMode = 'show'; // 'show' | 'lift' | 'xray' | 'hide'
+    let targetRoofY = 0;
+    let targetRoofOpacity = 1.0;
+
+    const roofMaterials = [materials.roofTiles, materials.roofRidge, materials.roofSoffit, materials.gutterAlu];
+
+    function setRoofMode(mode) {
+      roofMode = mode;
+      const badge = document.getElementById('roof-status-badge');
+      const labelsMap = { show: 'Affichée', lift: 'Soulevée', xray: 'Transparente', hide: 'Masquée' };
+      badge.textContent = labelsMap[mode];
+
+      document.querySelectorAll('.roof-btn').forEach(btn => {
+        const active = btn.dataset.roof === mode;
+        btn.className = active
+          ? 'roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition bg-white text-orange-700 shadow-sm'
+          : 'roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-medium transition text-slate-600 hover:text-slate-900';
+      });
+
+      if (mode === 'show') {
+        roofGroup.visible = true;
+        targetRoofY = 0;
+        targetRoofOpacity = 1.0;
+      } else if (mode === 'lift') {
+        roofGroup.visible = true;
+        targetRoofY = 2.6;
+        targetRoofOpacity = 1.0;
+      } else if (mode === 'xray') {
+        roofGroup.visible = true;
+        targetRoofY = 0;
+        targetRoofOpacity = 0.28;
+      } else if (mode === 'hide') {
+        targetRoofY = 0;
+        targetRoofOpacity = 0.0;
+        roofGroup.visible = false;
+      }
+    }
+
+    // Transitions de caméra fluides
+    let camAnim = null;
+    const cameraPresets = {
+      iso:     { pos: new THREE.Vector3(27.5, 16.5, 29.0), target: new THREE.Vector3(12.2, 1.4, 6.2) },
+      front:   { pos: new THREE.Vector3(15.2, 6.2, 26.5),  target: new THREE.Vector3(12.8, 1.8, 7.5) },
+      back:    { pos: new THREE.Vector3(10.5, 8.2, -18.5), target: new THREE.Vector3(11.5, 1.8, 4.5) },
+      top:     { pos: new THREE.Vector3(12.6, 31.0, 7.8),  target: new THREE.Vector3(12.6, 0.2, 6.4) },
+      terrace: { pos: new THREE.Vector3(-9.5, 5.2, 21.2),  target: new THREE.Vector3(5.8, 1.5, 7.2) }
+    };
+
+    function animateCameraTo(presetKey) {
+      const p = cameraPresets[presetKey];
+      if (!p) return;
+      camAnim = {
+        startPos: camera.position.clone(),
+        endPos: p.pos.clone(),
+        startTarget: controls.target.clone(),
+        endTarget: p.target.clone(),
+        progress: 0
+      };
+      if (presetKey === 'top') {
+        if (roofMode === 'show') setRoofMode('hide');
+        if (!showLabels) {
+          showLabels = true;
+          document.getElementById('toggle-labels').checked = true;
+        }
+      }
+    }
+
+    // =========================================================================
+    // 15. EXPORTEUR IMPRESSION 3D (BINARY STL & PURE-JS 3MF ZIP, Z-UP EN MM)
+    // =========================================================================
+    function getExportGroups(partMode) {
+      if (partMode === 'complete') return [bodyGroup, roofGroup];
+      if (partMode === 'body')     return [bodyGroup];
+      if (partMode === 'roof')     return [roofGroup];
+      if (partMode === 'terrain')  return [bodyGroup, roofGroup, terraceGroup, terrainGroup];
+      return [bodyGroup, roofGroup];
+    }
+
+    /**
+     * Collecte tous les triangles des maillages imprimables dans les groupes choisis,
+     * convertis en millimètres Z-up, recentrés en XY et posés sur le plateau Z = 0.
+     */
+    function collectPrintableGeometry(partMode, scaleDenom) {
+      const scaleFactor = 1000 / scaleDenom; // 1 m -> mm à l'échelle 1/scaleDenom
+      const groups = getExportGroups(partMode);
+
+      // Sauvegarde temporaire de la hauteur de toiture si elle est soulevée
+      const savedRoofY = roofGroup.position.y;
+      if (partMode !== 'roof') {
+        roofGroup.position.y = 0;
+      }
+      houseRoot.updateMatrixWorld(true);
+
+      const partsMap = new Map(); // partName -> { colorHex, triangles: [ax,ay,az, bx,by,bz, cx,cy,cz, ...] }
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      let minZ = Infinity, maxZ = -Infinity;
+      let totalTriangles = 0;
+
+      const vA = new THREE.Vector3();
+      const vB = new THREE.Vector3();
+      const vC = new THREE.Vector3();
+
+      // Transformation Three.js (Y-up m) -> Slicer (Z-up mm) en préservant l'orientation droite
+      const toSlicer = (v, out) => {
+        out.set(v.x * scaleFactor, -v.z * scaleFactor, v.y * scaleFactor);
+        if (out.x < minX) minX = out.x;
+        if (out.x > maxX) maxX = out.x;
+        if (out.y < minY) minY = out.y;
+        if (out.y > maxY) maxY = out.y;
+        if (out.z < minZ) minZ = out.z;
+        if (out.z > maxZ) maxZ = out.z;
+      };
+
+      const sA = new THREE.Vector3();
+      const sB = new THREE.Vector3();
+      const sC = new THREE.Vector3();
+
+      for (const grp of groups) {
+        grp.traverse((obj) => {
+          if (!obj.isMesh || !obj.userData.printable) return;
+          const geom = obj.geometry;
+          const posAttr = geom.attributes.position;
+          if (!posAttr) return;
+
+          const partName = obj.userData.partName || 'Maison';
+          const colorHex = obj.userData.printColor || '#E5E0D8';
+          if (!partsMap.has(partName)) {
+            partsMap.set(partName, { name: partName, color: colorHex, coords: [] });
+          }
+          const bucket = partsMap.get(partName).coords;
+
+          const matWorld = obj.matrixWorld;
+          const idx = geom.index;
+
+          if (idx) {
+            const arr = idx.array;
+            for (let i = 0; i < arr.length; i += 3) {
+              vA.fromBufferAttribute(posAttr, arr[i]).applyMatrix4(matWorld);
+              vB.fromBufferAttribute(posAttr, arr[i + 1]).applyMatrix4(matWorld);
+              vC.fromBufferAttribute(posAttr, arr[i + 2]).applyMatrix4(matWorld);
+              toSlicer(vA, sA); toSlicer(vB, sB); toSlicer(vC, sC);
+              bucket.push(sA.x, sA.y, sA.z, sB.x, sB.y, sB.z, sC.x, sC.y, sC.z);
+              totalTriangles++;
+            }
+          } else {
+            for (let i = 0; i < posAttr.count; i += 3) {
+              vA.fromBufferAttribute(posAttr, i).applyMatrix4(matWorld);
+              vB.fromBufferAttribute(posAttr, i + 1).applyMatrix4(matWorld);
+              vC.fromBufferAttribute(posAttr, i + 2).applyMatrix4(matWorld);
+              toSlicer(vA, sA); toSlicer(vB, sB); toSlicer(vC, sC);
+              bucket.push(sA.x, sA.y, sA.z, sB.x, sB.y, sB.z, sC.x, sC.y, sC.z);
+              totalTriangles++;
+            }
+          }
+        });
+      }
+
+      // Restauration de la position visuelle de la toiture
+      roofGroup.position.y = savedRoofY;
+      houseRoot.updateMatrixWorld(true);
+
+      const cx = (minX + maxX) * 0.5;
+      const cy = (minY + maxY) * 0.5;
+      const offsetZ = minZ;
+
+      // Recentrage XY et pose exacte à Z = 0.00 mm
+      for (const part of partsMap.values()) {
+        const c = part.coords;
+        for (let i = 0; i < c.length; i += 3) {
+          c[i]     -= cx;
+          c[i + 1] -= cy;
+          c[i + 2] -= offsetZ;
+        }
+      }
+
+      return {
+        parts: Array.from(partsMap.values()),
+        totalTriangles,
+        sizeX: maxX - minX,
+        sizeY: maxY - minY,
+        sizeZ: maxZ - minZ
+      };
+    }
+
+    // Exportateur STL Binaire pur JS
+    function buildBinarySTL(collected) {
+      const triCount = collected.totalTriangles;
+      const buffer = new ArrayBuffer(84 + triCount * 50);
+      const view = new DataView(buffer);
+
+      const header = 'Maison S 3D - Export Impression 3D (mm, Z-up)';
+      for (let i = 0; i < header.length && i < 80; i++) {
+        view.setUint8(i, header.charCodeAt(i));
+      }
+      view.setUint32(80, triCount, true);
+
+      let offset = 84;
+      const p1 = new THREE.Vector3();
+      const p2 = new THREE.Vector3();
+      const p3 = new THREE.Vector3();
+      const e1 = new THREE.Vector3();
+      const e2 = new THREE.Vector3();
+      const n  = new THREE.Vector3();
+
+      for (const part of collected.parts) {
+        const c = part.coords;
+        for (let i = 0; i < c.length; i += 9) {
+          p1.set(c[i],     c[i + 1], c[i + 2]);
+          p2.set(c[i + 3], c[i + 4], c[i + 5]);
+          p3.set(c[i + 6], c[i + 7], c[i + 8]);
+          e1.subVectors(p2, p1);
+          e2.subVectors(p3, p1);
+          n.crossVectors(e1, e2).normalize();
+
+          view.setFloat32(offset, n.x, true); offset += 4;
+          view.setFloat32(offset, n.y, true); offset += 4;
+          view.setFloat32(offset, n.z, true); offset += 4;
+
+          view.setFloat32(offset, p1.x, true); offset += 4;
+          view.setFloat32(offset, p1.y, true); offset += 4;
+          view.setFloat32(offset, p1.z, true); offset += 4;
+
+          view.setFloat32(offset, p2.x, true); offset += 4;
+          view.setFloat32(offset, p2.y, true); offset += 4;
+          view.setFloat32(offset, p2.z, true); offset += 4;
+
+          view.setFloat32(offset, p3.x, true); offset += 4;
+          view.setFloat32(offset, p3.y, true); offset += 4;
+          view.setFloat32(offset, p3.z, true); offset += 4;
+
+          view.setUint16(offset, 0, true); offset += 2;
+        }
+      }
+
+      return new Blob([buffer], { type: 'application/octet-stream' });
+    }
+
+    // Table CRC-32 & créateur d'archive ZIP STORE pur JS (100% conforme 3MF / OPC hors-ligne)
+    const crcTable = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) {
+        c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      crcTable[i] = c >>> 0;
+    }
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (let i = 0; i < bytes.length; i++) {
+        crc = crcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function createZipBlob(files, mimeType) {
+      const encoder = new TextEncoder();
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+
+      for (const file of files) {
+        const nameBytes = encoder.encode(file.name);
+        const dataBytes = typeof file.data === 'string' ? encoder.encode(file.data) : file.data;
+        const crc = crc32(dataBytes);
+        const len = dataBytes.length;
+
+        // En-tête local (30 octets + nom)
+        const lh = new ArrayBuffer(30 + nameBytes.length);
+        const lv = new DataView(lh);
+        lv.setUint32(0, 0x04034b50, true);
+        lv.setUint16(4, 20, true); // Version 2.0
+        lv.setUint16(6, 0, true);  // Flags
+        lv.setUint16(8, 0, true);  // Méthode 0 (STORE)
+        lv.setUint16(10, 0, true); // Heure
+        lv.setUint16(12, 0, true); // Date
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, len, true);
+        lv.setUint32(22, len, true);
+        lv.setUint16(26, nameBytes.length, true);
+        lv.setUint16(28, 0, true);
+        new Uint8Array(lh, 30).set(nameBytes);
+
+        localParts.push(new Uint8Array(lh), dataBytes);
+
+        // Entrée Central Directory (46 octets + nom)
+        const ch = new ArrayBuffer(46 + nameBytes.length);
+        const cv = new DataView(ch);
+        cv.setUint32(0, 0x02014b50, true);
+        cv.setUint16(4, 20, true);
+        cv.setUint16(6, 20, true);
+        cv.setUint16(8, 0, true);
+        cv.setUint16(10, 0, true);
+        cv.setUint16(12, 0, true);
+        cv.setUint16(14, 0, true);
+        cv.setUint32(16, crc, true);
+        cv.setUint32(20, len, true);
+        cv.setUint32(24, len, true);
+        cv.setUint16(28, nameBytes.length, true);
+        cv.setUint16(30, 0, true);
+        cv.setUint16(32, 0, true);
+        cv.setUint16(34, 0, true);
+        cv.setUint16(36, 0, true);
+        cv.setUint32(38, 0, true);
+        cv.setUint32(42, offset, true);
+        new Uint8Array(ch, 46).set(nameBytes);
+
+        centralParts.push(new Uint8Array(ch));
+        offset += 30 + nameBytes.length + len;
+      }
+
+      let centralSize = 0;
+      for (const p of centralParts) centralSize += p.length;
+
+      // End of Central Directory (22 octets)
+      const eocd = new ArrayBuffer(22);
+      const ev = new DataView(eocd);
+      ev.setUint32(0, 0x06054b50, true);
+      ev.setUint16(4, 0, true);
+      ev.setUint16(6, 0, true);
+      ev.setUint16(8, files.length, true);
+      ev.setUint16(10, files.length, true);
+      ev.setUint32(12, centralSize, true);
+      ev.setUint32(16, offset, true);
+      ev.setUint16(20, 0, true);
+
+      return new Blob([...localParts, ...centralParts, new Uint8Array(eocd)], { type: mimeType });
+    }
+
+    // Générateur 3MF complet multi-objets avec déduplication de sommets & couleurs matériaux
+    function build3MF(collected) {
+      const contentTypesXML = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
+  <Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml" />
+</Types>`;
+
+      const relsXML = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" />
+</Relationships>`;
+
+      const baseMaterialsLines = collected.parts.map((p, idx) =>
+        `      <base name="${p.name}" displaycolor="${p.color}FF" />`
+      ).join('\n');
+
+      const objectsXML = [];
+      const buildItemsXML = [];
+
+      collected.parts.forEach((part, idx) => {
+        const objId = idx + 2; // ID 1 réservé aux basematerials
+        const vertMap = new Map();
+        const vertLines = [];
+        const triLines = [];
+
+        const getVertIdx = (x, y, z) => {
+          const rx = Math.round(x * 1000) / 1000;
+          const ry = Math.round(y * 1000) / 1000;
+          const rz = Math.round(z * 1000) / 1000;
+          const key = `${rx}|${ry}|${rz}`;
+          let vi = vertMap.get(key);
+          if (vi === undefined) {
+            vi = vertLines.length;
+            vertMap.set(key, vi);
+            vertLines.push(`          <vertex x="${rx}" y="${ry}" z="${rz}" />`);
+          }
+          return vi;
+        };
+
+        const c = part.coords;
+        for (let i = 0; i < c.length; i += 9) {
+          const v1 = getVertIdx(c[i],     c[i + 1], c[i + 2]);
+          const v2 = getVertIdx(c[i + 3], c[i + 4], c[i + 5]);
+          const v3 = getVertIdx(c[i + 6], c[i + 7], c[i + 8]);
+          if (v1 !== v2 && v2 !== v3 && v3 !== v1) {
+            triLines.push(`          <triangle v1="${v1}" v2="${v2}" v3="${v3}" />`);
+          }
+        }
+
+        objectsXML.push(`    <object id="${objId}" name="${part.name}" type="model" pid="1" pindex="${idx}">
+      <mesh>
+        <vertices>
+${vertLines.join('\n')}
+        </vertices>
+        <triangles>
+${triLines.join('\n')}
+        </triangles>
+      </mesh>
+    </object>`);
+
+        buildItemsXML.push(`    <item objectid="${objId}" />`);
+      });
+
+      const modelXML = `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="fr-FR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+  <metadata name="Title">Maison S - Avenue de V</metadata>
+  <metadata name="Application">Maison S 3D Web Viewer</metadata>
+  <resources>
+    <basematerials id="1">
+${baseMaterialsLines}
+    </basematerials>
+${objectsXML.join('\n')}
+  </resources>
+  <build>
+${buildItemsXML.join('\n')}
+  </build>
+</model>`;
+
+      return createZipBlob([
+        { name: '[Content_Types].xml', data: contentTypesXML },
+        { name: '_rels/.rels', data: relsXML },
+        { name: '3D/3dmodel.model', data: modelXML }
+      ], 'model/3mf');
+    }
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      el.classList.remove('opacity-0', 'translate-y-3');
+      el.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.add('opacity-0', 'translate-y-3');
+        el.classList.remove('opacity-100', 'translate-y-0');
+      }, 4500);
+    }
+
+    function updatePrintDimensionsDisplay() {
+      const partMode = document.getElementById('print-part').value;
+      const scaleDenom = parseInt(document.getElementById('print-scale').value, 10);
+      const data = collectPrintableGeometry(partMode, scaleDenom);
+      document.getElementById('print-dims').textContent =
+        `${data.sizeX.toFixed(1)} × ${data.sizeY.toFixed(1)} × ${data.sizeZ.toFixed(1)} mm`;
+    }
+
+    // =========================================================================
+    // 16. CONNEXION DES ÉVÉNEMENTS DE L'INTERFACE
+    // =========================================================================
+    document.querySelectorAll('.roof-btn').forEach(btn => {
+      btn.addEventListener('click', () => setRoofMode(btn.dataset.roof));
+    });
+
+    document.querySelectorAll('.cam-btn').forEach(btn => {
+      btn.addEventListener('click', () => animateCameraTo(btn.dataset.cam));
+    });
+
+    document.getElementById('toggle-terrain').addEventListener('change', (e) => {
+      terrainGroup.visible = e.target.checked;
+    });
+    document.getElementById('toggle-terrace').addEventListener('change', (e) => {
+      terraceGroup.visible = e.target.checked;
+    });
+    document.getElementById('toggle-furniture').addEventListener('change', (e) => {
+      furnitureGroup.visible = e.target.checked;
+    });
+    document.getElementById('toggle-vegetation').addEventListener('change', (e) => {
+      vegetationGroup.visible = e.target.checked;
+    });
+    document.getElementById('toggle-labels').addEventListener('change', (e) => {
+      showLabels = e.target.checked;
+      updateRoomLabels();
+    });
+    document.getElementById('toggle-shadows').addEventListener('change', (e) => {
+      renderer.shadowMap.enabled = e.target.checked;
+      sunLight.castShadow = e.target.checked;
+      scene.traverse(obj => {
+        if (obj.isMesh && obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.needsUpdate = true);
+          else obj.material.needsUpdate = true;
+        }
+      });
+    });
+
+    document.getElementById('sun-slider').addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      const hrs = Math.floor(val);
+      const mins = Math.round((val - hrs) * 60);
+      document.getElementById('sun-time-label').textContent = `${hrs}h${mins === 0 ? '00' : String(mins).padStart(2, '0')}`;
+      updateSunPosition(val);
+    });
+
+    document.getElementById('print-part').addEventListener('change', updatePrintDimensionsDisplay);
+    document.getElementById('print-scale').addEventListener('change', updatePrintDimensionsDisplay);
+
+    const partFilenameSuffix = {
+      complete: 'complete',
+      body: 'corps-sans-toit',
+      roof: 'toit-amovible',
+      terrain: 'avec-terrain'
+    };
+
+    document.getElementById('btn-export-stl').addEventListener('click', () => {
+      try {
+        const partMode = document.getElementById('print-part').value;
+        const scaleDenom = parseInt(document.getElementById('print-scale').value, 10);
+        const collected = collectPrintableGeometry(partMode, scaleDenom);
+        const blob = buildBinarySTL(collected);
+        const fname = `maison-s-${partFilenameSuffix[partMode]}-1-${scaleDenom}.stl`;
+        triggerDownload(blob, fname);
+        showToast(
+          `STL prêt (${collected.totalTriangles.toLocaleString('fr-FR')} triangles • ` +
+          `${collected.sizeX.toFixed(0)}×${collected.sizeY.toFixed(0)}×${collected.sizeZ.toFixed(0)} mm)`
+        );
+      } catch (err) {
+        console.error(err);
+        showToast('Erreur lors de la génération du fichier STL.');
+      }
+    });
+
+    document.getElementById('btn-export-3mf').addEventListener('click', () => {
+      try {
+        const partMode = document.getElementById('print-part').value;
+        const scaleDenom = parseInt(document.getElementById('print-scale').value, 10);
+        const collected = collectPrintableGeometry(partMode, scaleDenom);
+        const blob = build3MF(collected);
+        const fname = `maison-s-${partFilenameSuffix[partMode]}-1-${scaleDenom}.3mf`;
+        triggerDownload(blob, fname);
+        showToast(
+          `3MF prêt (${collected.parts.length} pièces, ${collected.totalTriangles.toLocaleString('fr-FR')} triangles • ` +
+          `${collected.sizeX.toFixed(0)}×${collected.sizeY.toFixed(0)}×${collected.sizeZ.toFixed(0)} mm)`
+        );
+      } catch (err) {
+        console.error(err);
+        showToast('Erreur lors de la génération du fichier 3MF.');
+      }
+    });
+
+    // Repli / affichage de la barre latérale (pratique sur mobile)
+    const sidebar = document.getElementById('sidebar');
+    let sidebarOpen = window.innerWidth >= 640;
+    const syncSidebarUI = () => {
+      if (sidebarOpen) {
+        sidebar.classList.remove('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
+      } else {
+        sidebar.classList.add('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
+      }
+    };
+    syncSidebarUI();
+
+    document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+      sidebarOpen = !sidebarOpen;
+      syncSidebarUI();
+    });
+
+    // Annuler l'animation caméra dès que l'utilisateur prend la main
+    controls.addEventListener('start', () => { camAnim = null; });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // =========================================================================
+    // 17. BOUCLE DE RENDU PRINCIPALE
+    // =========================================================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Interpolation douce de l'altitude et de la transparence de la toiture
+      roofGroup.position.y += (targetRoofY - roofGroup.position.y) * 0.12;
+      for (const m of roofMaterials) {
+        const nextOp = m.opacity + (targetRoofOpacity - m.opacity) * 0.14;
+        if (Math.abs(nextOp - m.opacity) > 0.002) {
+          m.opacity = nextOp;
+          m.transparent = nextOp < 0.99;
+          m.depthWrite = nextOp > 0.85;
+          m.needsUpdate = true;
+        }
+      }
+
+      // Animation fluide des presets caméra
+      if (camAnim) {
+        camAnim.progress = Math.min(1, camAnim.progress + 0.045);
+        const ease = 1 - Math.pow(1 - camAnim.progress, 3);
+        camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, ease);
+        controls.target.lerpVectors(camAnim.startTarget, camAnim.endTarget, ease);
+        if (camAnim.progress >= 1) camAnim = null;
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+      updateRoomLabels();
+    }
+
+    window.onload = () => {
+      updatePrintDimensionsDisplay();
+      animate();
+    };
+  </script>
+</body>
+</html>
