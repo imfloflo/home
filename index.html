@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maquette 3D — Commune de S (Export STL / 3MF)</title>
+  <title>Maquette 3D — Maison S (Commune de S) • Export STL / 3MF</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,8 +12,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
       }
     }
   </script>
@@ -45,11 +45,11 @@
       outline: none;
     }
     .glass-dark {
-      background: rgba(15, 23, 42, 0.78);
+      background: rgba(15, 23, 42, 0.80);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(148, 163, 184, 0.22);
-      box-shadow: 0 18px 40px -10px rgba(2, 6, 23, 0.55), 0 4px 14px -2px rgba(2, 6, 23, 0.35);
+      box-shadow: 0 20px 44px -12px rgba(2, 6, 23, 0.6), 0 4px 16px -2px rgba(2, 6, 23, 0.35);
     }
     .custom-scroll::-webkit-scrollbar {
       width: 5px;
@@ -58,7 +58,7 @@
       background: transparent;
     }
     .custom-scroll::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.3);
+      background: rgba(148, 163, 184, 0.32);
       border-radius: 999px;
     }
     .room-label {
@@ -95,54 +95,59 @@
     .toggle-input:checked + .toggle-switch::after {
       transform: translateX(16px);
     }
+    .toggle-input:disabled + .toggle-switch {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body class="text-slate-100">
-  <!-- Conteneur WebGL Three.js -->
+  <!-- Conteneur WebGL plein écran -->
   <div id="canvas-container"></div>
 
-  <!-- Calque 2D des étiquettes de pièces et repères -->
+  <!-- Calque 2D pour les étiquettes des pièces & repères -->
   <div id="labels-layer" class="fixed inset-0 pointer-events-none overflow-hidden z-10"></div>
 
-  <!-- En-tête flottant anonymisé -->
-  <header class="fixed top-3 left-3 right-16 sm:right-auto z-20 pointer-events-none flex flex-col gap-1.5">
-    <div class="glass-dark pointer-events-auto rounded-2xl px-4 py-2.5 flex items-center gap-3 max-w-full">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-700 text-white flex items-center justify-center shadow-md shrink-0">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+  <!-- Bouton compact d'ouverture/fermeture du panneau gauche -->
+  <button
+    id="btn-toggle-sidebar"
+    type="button"
+    title="Afficher / masquer le panneau de contrôle"
+    class="fixed top-3 left-3 z-30 glass-dark rounded-xl px-3 py-2.5 text-slate-100 hover:text-amber-300 hover:bg-slate-800/90 transition active:scale-95 flex items-center gap-2 text-xs font-semibold"
+  >
+    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+    <span id="sidebar-btn-label" class="hidden sm:inline">Contrôles</span>
+  </button>
+
+  <!-- Badge titre flottant anonymisé en haut à droite -->
+  <header class="fixed top-3 right-3 left-16 sm:left-auto z-20 pointer-events-none flex justify-end">
+    <div class="glass-dark pointer-events-auto rounded-2xl px-4 py-2 flex items-center gap-3 max-w-full">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 to-amber-700 text-white flex items-center justify-center shadow-md shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5L12 3l9 7.5M5 9.5V20a1 1 0 001 1h12a1 1 0 001-1V9.5M9 21v-6h6v6" />
         </svg>
       </div>
       <div class="min-w-0">
         <h1 class="text-xs sm:text-sm font-bold text-slate-50 truncate">
-          Maquette 3D — Commune de S
+          Maison S — Commune de S
         </h1>
         <p class="text-[11px] text-slate-300 truncate">
-          Plain-pied 45° • 142,52 m² hab. + 38,40 m² garage • Accès Avenue de V
+          Avenue de V • 142,52 m² hab. + 38,40 m² garage • Terrasse 3,60 m (60×60)
         </p>
       </div>
     </div>
   </header>
 
-  <!-- Bouton de repli / affichage du panneau latéral -->
-  <button
-    id="btn-toggle-sidebar"
-    type="button"
-    title="Afficher / masquer le panneau de contrôle"
-    class="fixed top-3 right-3 z-30 glass-dark rounded-xl p-2.5 text-slate-200 hover:text-amber-300 hover:bg-slate-800/90 transition active:scale-95"
-  >
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  </button>
-
-  <!-- Panneau de contrôle glassmorphique sombre repliable -->
+  <!-- Panneau de contrôle latéral gauche glassmorphique sombre repliable -->
   <aside
     id="sidebar"
-    class="fixed top-16 right-3 bottom-3 z-20 w-[calc(100vw-1.5rem)] max-w-[340px] glass-dark rounded-2xl flex flex-col overflow-hidden transition-all duration-300"
+    class="fixed top-16 left-3 bottom-3 z-20 w-[calc(100vw-1.5rem)] max-w-[344px] glass-dark rounded-2xl flex flex-col overflow-hidden transition-all duration-300"
   >
     <div class="custom-scroll overflow-y-auto p-3.5 space-y-4 flex-1">
 
-      <!-- 1. Contrôle de la toiture -->
+      <!-- 1. Toiture -->
       <section class="space-y-2">
         <div class="flex items-center justify-between">
           <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -155,7 +160,7 @@
             Affichée
           </span>
         </div>
-        <div class="grid grid-cols-4 gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-700/60">
+        <div class="grid grid-cols-4 gap-1 bg-slate-950/65 p-1 rounded-xl border border-slate-700/60">
           <button data-roof="show" class="roof-btn px-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition bg-orange-600 text-white shadow-sm">
             Affiché
           </button>
@@ -171,77 +176,71 @@
         </div>
       </section>
 
-      <!-- 2. Caméras préréglées -->
+      <!-- 2. Vues rapides -->
       <section class="space-y-2">
         <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
-          Vues Caméra
+          Vues rapides
         </h2>
         <div class="grid grid-cols-2 gap-1.5">
           <button data-cam="drone" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 text-slate-100 hover:border-orange-400/60 transition text-left">
             Vue Drone
           </button>
           <button data-cam="patio" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 text-slate-100 hover:border-orange-400/60 transition text-left">
-            Façade & Patio
+            Façade &amp; Patio
           </button>
           <button data-cam="garage" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 text-slate-100 hover:border-orange-400/60 transition text-left">
             Pignon Garage
           </button>
-          <button data-cam="top" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-medium bg-orange-600/20 hover:bg-orange-600/35 border border-orange-500/40 text-orange-200 transition text-left">
-            Vue Dessus (Plan)
+          <button data-cam="plan" class="cam-btn px-2.5 py-2 rounded-xl text-xs font-semibold bg-orange-600/25 hover:bg-orange-600/40 border border-orange-500/50 text-orange-200 transition text-left">
+            Plan (Toit off)
           </button>
-          <button data-cam="cutaway" class="cam-btn col-span-2 px-2.5 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 text-slate-100 hover:border-orange-400/60 transition text-center">
-            Intérieur / Coupe (Cellier & Séjour)
+          <button data-cam="interior" class="cam-btn col-span-2 px-2.5 py-2 rounded-xl text-xs font-medium bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 text-slate-100 hover:border-orange-400/60 transition text-center">
+            Zoom Intérieur (Décrochage, WC &amp; Suite)
           </button>
         </div>
       </section>
 
-      <!-- 3. Calques & Éclairage Jour / Soirée -->
+      <!-- 3. Affichage -->
       <section class="space-y-2">
         <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
           </svg>
-          Affichage & Ambiance
+          Affichage
         </h2>
-        <div class="bg-slate-900/60 rounded-xl p-2.5 border border-slate-700/60 space-y-2.5">
+        <div class="bg-slate-900/65 rounded-xl p-2.5 border border-slate-700/60 space-y-2.5">
           <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
-            <span>Intérieur & Mobilier</span>
-            <input type="checkbox" id="toggle-furniture" class="toggle-input sr-only" checked />
-            <span class="toggle-switch"></span>
-          </label>
-          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
-            <span>Étiquettes des pièces</span>
+            <span>Étiquettes pièces (14)</span>
             <input type="checkbox" id="toggle-labels" class="toggle-input sr-only" />
             <span class="toggle-switch"></span>
           </label>
           <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
-            <span>Terrain & Environnement</span>
-            <input type="checkbox" id="toggle-env" class="toggle-input sr-only" checked />
+            <span>Mobilier &amp; Voiture</span>
+            <input type="checkbox" id="toggle-furniture" class="toggle-input sr-only" checked />
             <span class="toggle-switch"></span>
           </label>
-
-          <!-- Sélecteur Jour / Soirée -->
-          <div class="pt-2 border-t border-slate-700/70">
-            <div class="flex items-center justify-between mb-1.5 text-[11px] text-slate-300 font-medium">
-              <span>Éclairage</span>
-              <span id="lighting-label" class="text-amber-300 font-semibold">Jour</span>
-            </div>
-            <div class="grid grid-cols-2 gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-700/50">
-              <button id="btn-light-day" type="button" class="py-1.5 rounded-lg text-[11px] font-semibold bg-amber-500 text-slate-950 transition">
-                Jour
-              </button>
-              <button id="btn-light-evening" type="button" class="py-1.5 rounded-lg text-[11px] font-medium text-slate-300 hover:text-white transition">
-                Soirée
-              </button>
-            </div>
-          </div>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
+            <span>Terrain &amp; Cour</span>
+            <input type="checkbox" id="toggle-terrain" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
+            <span>Mode Soirée</span>
+            <input type="checkbox" id="toggle-evening" class="toggle-input sr-only" />
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
+            <span>Grille 60×60 visible</span>
+            <input type="checkbox" id="toggle-tilegrid" class="toggle-input sr-only" checked />
+            <span class="toggle-switch"></span>
+          </label>
         </div>
       </section>
 
-      <!-- 4. Module Export Impression 3D (.STL & .3MF) -->
+      <!-- 4. Export Impression 3D (.STL / .3MF) -->
       <section class="rounded-2xl bg-slate-950/75 border border-amber-500/30 p-3.5 space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
@@ -264,33 +263,46 @@
             id="print-part"
             class="w-full rounded-xl bg-slate-800/95 border border-slate-600 text-slate-100 text-xs px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
-            <option value="complete">1. Maison complète (Murs + Toit)</option>
-            <option value="body">2. Corps de maison seul (sans toit)</option>
-            <option value="roof">3. Toit amovible seul (à plat Z=0)</option>
-            <option value="terrain">4. Maquette avec Terrain & Terrasse</option>
+            <option value="complet">Maison complète (avec toit)</option>
+            <option value="corps">Corps seul (murs + cloisons, sans toit)</option>
+            <option value="toit">Toit amovible seul (à plat sur Z=0)</option>
           </select>
         </div>
 
         <div class="space-y-1.5">
           <label for="print-scale" class="block text-[11px] font-medium text-slate-300">
-            Échelle d'impression
+            Échelle
           </label>
           <select
             id="print-scale"
             class="w-full rounded-xl bg-slate-800/95 border border-slate-600 text-slate-100 text-xs px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400"
           >
-            <option value="100">1/100 (Maison ≈ 25,6 cm)</option>
-            <option value="125">1/125 (Maison ≈ 20,4 cm)</option>
-            <option value="150" selected>1/150 (Maison ≈ 17,0 cm)</option>
-            <option value="200">1/200 (Maison ≈ 12,8 cm)</option>
-            <option value="250">1/250 (Maison ≈ 10,2 cm)</option>
+            <option value="100">1/100 (≈ 25,6 cm)</option>
+            <option value="125">1/125 (≈ 20,4 cm)</option>
+            <option value="150" selected>1/150 (≈ 17,0 cm)</option>
+            <option value="200">1/200 (≈ 12,8 cm)</option>
+            <option value="250">1/250 (≈ 10,2 cm)</option>
           </select>
         </div>
 
-        <!-- Dimensions plateau en direct -->
-        <div class="rounded-xl bg-slate-900/90 border border-slate-700/70 px-3 py-2 flex items-center justify-between text-[11px]">
-          <span class="text-slate-400">Plateau (L×P×H) :</span>
-          <span id="print-dims" class="font-mono font-semibold text-amber-300">-- × -- × -- mm</span>
+        <label class="flex items-center justify-between cursor-pointer text-[11px] text-slate-200 font-medium pt-0.5">
+          <span>Inclure le socle terrain &amp; terrasse</span>
+          <input type="checkbox" id="export-include-terrain" class="toggle-input sr-only" />
+          <span class="toggle-switch"></span>
+        </label>
+
+        <!-- Lecture en direct des dimensions plateau + alerte 250×250 mm -->
+        <div class="rounded-xl bg-slate-900/90 border border-slate-700/70 px-3 py-2 space-y-1.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400">Plateau (L×l×H) :</span>
+            <span id="print-dims" class="font-mono font-semibold text-amber-300">-- × -- × -- mm</span>
+          </div>
+          <div id="bed-warning" class="hidden text-[10px] font-medium px-2 py-1 rounded-lg bg-rose-500/20 text-rose-200 border border-rose-500/40 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 shrink-0 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span>Dépasse un plateau standard 250 × 250 mm</span>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2 pt-0.5">
@@ -302,7 +314,7 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
             </svg>
-            .STL
+            Télécharger .STL
           </button>
           <button
             id="btn-export-3mf"
@@ -312,11 +324,11 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
             </svg>
-            .3MF
+            Télécharger .3MF
           </button>
         </div>
         <p class="text-[10px] text-slate-400 leading-relaxed">
-          Solides fermés uniquement (sans vitres, mobilier ni PAC). Recentré en XY et posé à Z=0 mm. Multi-pièces colorées en .3MF.
+          Solides fermés uniquement (sans vitrages, mobilier ni accessoires). Recentré en X/Y et posé sur Z = 0,00 mm.
         </p>
       </section>
     </div>
@@ -324,18 +336,18 @@
     <div class="px-3.5 py-2 border-t border-slate-700/60 bg-slate-950/60 text-[10px] text-slate-400 flex items-center justify-between">
       <span>Clic gauche : Rotation</span>
       <span>Molette : Zoom</span>
-      <span>Clic droit : Pan</span>
+      <span>Clic droit : Déplacer</span>
     </div>
   </aside>
 
-  <!-- Toast de notification (jamais alert()) -->
+  <!-- Toast de notification -->
   <div
     id="toast"
     class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-3 transition-all duration-300"
   >
     <div class="glass-dark text-slate-100 px-4 py-2.5 rounded-2xl flex items-center gap-2.5 text-xs max-w-[92vw]">
       <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-      <span id="toast-message">Fichier généré</span>
+      <span id="toast-message">Export prêt</span>
     </div>
   </div>
 
@@ -345,18 +357,18 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
     // =========================================================================
-    // 1. INITIALISATION SCÈNE, CAMÉRA & RENDU WEBGL
+    // 1. INITIALISATION SCÈNE, CIEL PROCÉDURAL, CAMÉRA & RENDU WEBGL
     // =========================================================================
     const container = document.getElementById('canvas-container');
     const labelsLayer = document.getElementById('labels-layer');
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xcce0f5);
-    scene.fog = new THREE.FogExp2(0xcce0f5, 0.0046);
+    scene.background = new THREE.Color(0xc8dff4);
+    scene.fog = new THREE.FogExp2(0xc8dff4, 0.0042);
 
-    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 240);
-    // Angle initial "Vue Drone" proche de la vue aérienne 3/4 avant-droite
-    camera.position.set(22.5, 16.0, 31.5);
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 280);
+    // Scène centrée autour de (0, 0, 0) via décalage (-12.5, 0, -5.5) du repère plan
+    camera.position.set(11.5, 16.0, 26.5);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -371,105 +383,141 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.065;
     controls.maxPolarAngle = Math.PI / 2 - 0.025;
-    controls.minDistance = 4.0;
-    controls.maxDistance = 90.0;
-    controls.target.set(12.2, 1.3, 6.4);
+    controls.minDistance = 3.5;
+    controls.maxDistance = 95.0;
+    controls.target.set(0.0, 1.2, 1.2);
     controls.update();
 
+    // Dôme de ciel dégradé procédural (Jour / Soirée)
+    const skyUniforms = {
+      topColor:    { value: new THREE.Color(0x639cd9) },
+      bottomColor: { value: new THREE.Color(0xdbe9f6) },
+      offset:      { value: 8.0 },
+      exponent:    { value: 0.65 }
+    };
+    const skyDome = new THREE.Mesh(
+      new THREE.SphereGeometry(160, 28, 16),
+      new THREE.ShaderMaterial({
+        uniforms: skyUniforms,
+        side: THREE.BackSide,
+        depthWrite: false,
+        vertexShader: `
+          varying vec3 vWorldPos;
+          void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 topColor;
+          uniform vec3 bottomColor;
+          uniform float offset;
+          uniform float exponent;
+          varying vec3 vWorldPos;
+          void main() {
+            float h = normalize(vWorldPos + vec3(0.0, offset, 0.0)).y;
+            gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+          }
+        `
+      })
+    );
+    scene.add(skyDome);
+
     // =========================================================================
-    // 2. ÉCLAIRAGE JOUR / SOIRÉE + LUMIÈRES INTÉRIEURES CHAUDES
+    // 2. ÉCLAIRAGE JOUR / SOIRÉE & LUMIÈRES INTÉRIEURES CHAUDES
     // =========================================================================
-    const hemiLight = new THREE.HemisphereLight(0xf2f8ff, 0x76826b, 0.78);
-    hemiLight.position.set(0, 45, 0);
+    const hemiLight = new THREE.HemisphereLight(0xf3f9ff, 0x76826b, 0.80);
+    hemiLight.position.set(0, 48, 0);
     scene.add(hemiLight);
 
     const sunLight = new THREE.DirectionalLight(0xfff9ee, 2.25);
-    sunLight.position.set(28, 32, 26);
+    sunLight.position.set(18, 32, 22);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 2;
-    sunLight.shadow.camera.far = 105;
-    const shadowBound = 30;
-    sunLight.shadow.camera.left = -shadowBound;
-    sunLight.shadow.camera.right = shadowBound;
-    sunLight.shadow.camera.top = shadowBound;
-    sunLight.shadow.camera.bottom = -shadowBound;
+    sunLight.shadow.camera.far = 110;
+    const sBound = 30;
+    sunLight.shadow.camera.left = -sBound;
+    sunLight.shadow.camera.right = sBound;
+    sunLight.shadow.camera.top = sBound;
+    sunLight.shadow.camera.bottom = -sBound;
     sunLight.shadow.bias = -0.00045;
     sunLight.shadow.normalBias = 0.025;
     scene.add(sunLight);
     scene.add(sunLight.target);
-    sunLight.target.position.set(12.5, 0, 6.5);
+    sunLight.target.position.set(0, 0, 1);
 
     const fillLight = new THREE.DirectionalLight(0xc2dcff, 0.45);
-    fillLight.position.set(-24, 14, -18);
+    fillLight.position.set(-24, 15, -18);
     scene.add(fillLight);
 
-    // Lumières intérieures chaudes activées en mode Soirée
+    // Repère plan global : centre la maison autour de (0, 0, 0) dans la scène Three.js
+    const PLAN_OFFSET_X = -12.5;
+    const PLAN_OFFSET_Z = -5.5;
+    const worldRoot = new THREE.Group();
+    worldRoot.position.set(PLAN_OFFSET_X, 0, PLAN_OFFSET_Z);
+    scene.add(worldRoot);
+
+    // Lumières intérieures chaudes (placées en coordonnées plan `(px, y, pz)`)
     const warmLights = [];
     [
-      [5.5, 2.2, 6.8],   // Pièce de vie
-      [11.8, 2.2, 6.8],  // Entrée
-      [14.2, 2.3, 8.8],  // Patio couvert
+      [5.4, 2.2, 6.6],   // Pièces de vie
+      [11.8, 2.2, 6.5],  // Entrée / Couloir
+      [14.1, 2.4, 8.6],  // Patio couvert
+      [15.8, 2.2, 2.2],  // Chambre 3
       [2.2, 2.2, 2.0]    // Chambre 1
     ].forEach(([lx, ly, lz]) => {
-      const pt = new THREE.PointLight(0xffb86b, 0.0, 14, 1.8);
+      const pt = new THREE.PointLight(0xffb664, 0.0, 14, 1.8);
       pt.position.set(lx, ly, lz);
-      scene.add(pt);
+      worldRoot.add(pt);
       warmLights.push(pt);
     });
 
-    function setLightingMode(mode) {
-      const label = document.getElementById('lighting-label');
-      const btnDay = document.getElementById('btn-light-day');
-      const btnEve = document.getElementById('btn-light-evening');
-
-      if (mode === 'day') {
-        label.textContent = 'Jour';
-        btnDay.className = 'py-1.5 rounded-lg text-[11px] font-semibold bg-amber-500 text-slate-950 transition';
-        btnEve.className = 'py-1.5 rounded-lg text-[11px] font-medium text-slate-300 hover:text-white transition';
-
-        scene.background.setHex(0xcce0f5);
-        scene.fog.color.setHex(0xcce0f5);
-        hemiLight.color.setHex(0xf2f8ff);
+    function setEveningMode(isEvening) {
+      if (!isEvening) {
+        skyUniforms.topColor.value.setHex(0x639cd9);
+        skyUniforms.bottomColor.value.setHex(0xdbe9f6);
+        scene.background.setHex(0xc8dff4);
+        scene.fog.color.setHex(0xc8dff4);
+        hemiLight.color.setHex(0xf3f9ff);
         hemiLight.groundColor.setHex(0x76826b);
-        hemiLight.intensity = 0.78;
-        sunLight.position.set(28, 32, 26);
+        hemiLight.intensity = 0.80;
+        sunLight.position.set(18, 32, 22);
         sunLight.color.setHex(0xfff9ee);
         sunLight.intensity = 2.25;
         fillLight.intensity = 0.45;
         renderer.toneMappingExposure = 1.06;
         warmLights.forEach(l => { l.intensity = 0; });
       } else {
-        label.textContent = 'Soirée';
-        btnEve.className = 'py-1.5 rounded-lg text-[11px] font-semibold bg-orange-600 text-white transition';
-        btnDay.className = 'py-1.5 rounded-lg text-[11px] font-medium text-slate-300 hover:text-white transition';
-
-        scene.background.setHex(0x1d2740);
-        scene.fog.color.setHex(0x1d2740);
-        hemiLight.color.setHex(0x475e8a);
-        hemiLight.groundColor.setHex(0x282320);
-        hemiLight.intensity = 0.48;
-        sunLight.position.set(-28, 11, 22);
-        sunLight.color.setHex(0xff8c4a);
-        sunLight.intensity = 1.45;
-        fillLight.intensity = 0.25;
+        skyUniforms.topColor.value.setHex(0x0b1224);
+        skyUniforms.bottomColor.value.setHex(0x3a2c3e);
+        scene.background.setHex(0x161f36);
+        scene.fog.color.setHex(0x1e263b);
+        hemiLight.color.setHex(0x4a6394);
+        hemiLight.groundColor.setHex(0x221d1a);
+        hemiLight.intensity = 0.45;
+        sunLight.position.set(-26, 9, 18);
+        sunLight.color.setHex(0xff8442);
+        sunLight.intensity = 1.35;
+        fillLight.intensity = 0.22;
         renderer.toneMappingExposure = 1.12;
-        warmLights.forEach((l, idx) => { l.intensity = idx === 2 ? 3.5 : 2.8; });
+        warmLights.forEach((l, idx) => { l.intensity = idx === 2 ? 3.8 : 2.9; });
       }
     }
 
     // =========================================================================
-    // 3. TEXTURES PROCÉDURALES (ENDUIT BLANC, TUILES CANAL ROUGES, TRAVERTIN)
+    // 3. TEXTURES PROCÉDURALES (ENDUIT, TUILES CANAL ROUGES, DALLES 60×60 CM)
     // =========================================================================
     function createStuccoTexture() {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#f5f3ee';
+      ctx.fillStyle = '#f3f1ec';
       ctx.fillRect(0, 0, 256, 256);
       for (let i = 0; i < 14000; i++) {
-        const v = 232 + Math.floor(Math.random() * 20);
+        const v = 230 + Math.floor(Math.random() * 20);
         ctx.fillStyle = `rgb(${v},${v - 2},${v - 6})`;
         ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
       }
@@ -541,23 +589,68 @@
       return { map, bumpMap };
     }
 
-    function createTileFloorTexture(baseHex, groutHex, cells = 6) {
+    /**
+     * Texture 512×512 représentant exactement une grille 4×4 de dalles 60×60 cm
+     * (1 répétition UV = 2,40 m × 2,40 m) avec joints fins 2-3 mm et nuance pierre naturelle.
+     */
+    function createTerrace60x60Texture() {
+      const size = 512;
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      const ctx = c.getContext('2d');
+
+      const cells = 4; // 4 × 0,60 m = 2,40 m par tuile texture
+      const step = size / cells; // 128 px par dalle 60 cm
+
+      for (let r = 0; r < cells; r++) {
+        for (let col = 0; col < cells; col++) {
+          const x = col * step;
+          const y = r * step;
+          // Variation tonale naturelle subtile d'une dalle travertin à l'autre
+          const seed = Math.sin((r * 7 + col * 13) * 1.7) * 0.5 + 0.5;
+          const R = Math.round(227 + seed * 11);
+          const G = Math.round(220 + seed * 11);
+          const B = Math.round(206 + seed * 11);
+          ctx.fillStyle = `rgb(${R},${G},${B})`;
+          ctx.fillRect(x, y, step, step);
+
+          // Veinage travertin discret à l'intérieur de la dalle
+          for (let k = 0; k < 140; k++) {
+            const vx = x + Math.random() * (step - 6);
+            const vy = y + Math.random() * (step - 3);
+            ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.12)' : 'rgba(138,125,105,0.08)';
+            ctx.fillRect(vx, vy, 5 + Math.random() * 8, 1.5);
+          }
+        }
+      }
+
+      // Joints nets 2-3 mm entre chaque dalle 60×60 cm
+      ctx.strokeStyle = '#aba292';
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i <= cells; i++) {
+        const p = i * step;
+        ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, size); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(size, p); ctx.stroke();
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    function createInteriorTileTexture() {
       const size = 256;
       const c = document.createElement('canvas');
       c.width = size; c.height = size;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = baseHex;
+      ctx.fillStyle = '#d6ccbc';
       ctx.fillRect(0, 0, size, size);
-
-      // Légère marbrure travertin / pierre
-      for (let i = 0; i < 4000; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(130,115,95,0.06)';
-        ctx.fillRect(Math.random() * size, Math.random() * size, 4, 2);
-      }
-      ctx.strokeStyle = groutHex;
+      ctx.strokeStyle = '#bcb19f';
       ctx.lineWidth = 2;
-      const step = size / cells;
-      for (let i = 0; i <= cells; i++) {
+      const step = size / 6;
+      for (let i = 0; i <= 6; i++) {
         ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
       }
@@ -570,31 +663,33 @@
 
     const stuccoTex = createStuccoTexture();
     const roofTileTex = createTerracottaTileTextures();
-    const interiorTileTex = createTileFloorTexture('#d5cbb9', '#b8ae9c', 6);
-    const travertineTex = createTileFloorTexture('#e8e1d5', '#cbc3b4', 5);
+    const terrace60Tex = createTerrace60x60Texture();
+    const interiorTileTex = createInteriorTileTexture();
 
     // =========================================================================
     // 4. MATÉRIAUX ARCHITECTURAUX
     // =========================================================================
     const mat = {
-      extWall: new THREE.MeshStandardMaterial({ color: 0xf6f5f0, map: stuccoTex, roughness: 0.86, metalness: 0.02 }),
+      extWall: new THREE.MeshStandardMaterial({ color: 0xf3f1ec, map: stuccoTex, roughness: 0.86, metalness: 0.02 }),
       intWall: new THREE.MeshStandardMaterial({ color: 0xf8f7f4, roughness: 0.90 }),
+      doorLeaf: new THREE.MeshStandardMaterial({ color: 0xebe6dd, roughness: 0.65 }),
       slab: new THREE.MeshStandardMaterial({ color: 0xd8d4cc, roughness: 0.88 }),
-      floorLiving: new THREE.MeshStandardMaterial({ map: interiorTileTex, roughness: 0.58, metalness: 0.05 }),
+      floorLiving: new THREE.MeshStandardMaterial({ map: interiorTileTex, roughness: 0.56, metalness: 0.05 }),
       floorWood: new THREE.MeshStandardMaterial({ color: 0xc9ab84, roughness: 0.72 }),
-      floorCellier: new THREE.MeshStandardMaterial({ color: 0xc5bfb3, roughness: 0.72 }),
+      floorBath: new THREE.MeshStandardMaterial({ color: 0xd0d6db, roughness: 0.52 }),
+      floorCellier: new THREE.MeshStandardMaterial({ color: 0xc2bcb0, roughness: 0.75 }),
       floorGarage: new THREE.MeshStandardMaterial({ color: 0x9ea3a8, roughness: 0.92 }),
-      anthracite: new THREE.MeshStandardMaterial({ color: 0x383e42, roughness: 0.42, metalness: 0.34 }), // RAL 7016
+      anthracite: new THREE.MeshStandardMaterial({ color: 0x2f353b, roughness: 0.40, metalness: 0.35 }), // RAL 7016
       sill: new THREE.MeshStandardMaterial({ color: 0xe3dfd6, roughness: 0.78 }),
       glass: new THREE.MeshPhysicalMaterial({
         color: 0x6f97b0,
         transparent: true,
-        opacity: 0.40,
+        opacity: 0.38,
         roughness: 0.08,
-        metalness: 0.15,
+        metalness: 0.16,
         depthWrite: false
       }),
-      chrome: new THREE.MeshStandardMaterial({ color: 0xdce2e8, roughness: 0.24, metalness: 0.85 }),
+      chrome: new THREE.MeshStandardMaterial({ color: 0xdce2e8, roughness: 0.24, metalness: 0.86 }),
       roofTiles: new THREE.MeshStandardMaterial({
         map: roofTileTex.map,
         bumpMap: roofTileTex.bumpMap,
@@ -605,28 +700,29 @@
         opacity: 1.0
       }),
       roofRidge: new THREE.MeshStandardMaterial({ color: 0xa23c23, roughness: 0.72, transparent: false, opacity: 1.0 }),
-      roofSoffit: new THREE.MeshStandardMaterial({ color: 0xf7f8fa, roughness: 0.65, transparent: false, opacity: 1.0 }),
-      gutterAlu: new THREE.MeshStandardMaterial({ color: 0xd0d6dd, roughness: 0.36, metalness: 0.46, transparent: false, opacity: 1.0 }),
-      terraceTop: new THREE.MeshStandardMaterial({ map: travertineTex, roughness: 0.72 }),
+      roofSoffit: new THREE.MeshStandardMaterial({ color: 0xf7f7f7, roughness: 0.65, transparent: false, opacity: 1.0 }),
+      gutterAlu: new THREE.MeshStandardMaterial({ color: 0x565d65, roughness: 0.42, metalness: 0.48, transparent: false, opacity: 1.0 }),
+      terraceTop: new THREE.MeshStandardMaterial({ map: terrace60Tex, roughness: 0.74 }),
       terraceEdge: new THREE.MeshStandardMaterial({ color: 0xbcb5a8, roughness: 0.85 }),
       foundation: new THREE.MeshStandardMaterial({ color: 0x878b90, roughness: 0.92 })
     };
 
     // =========================================================================
-    // 5. GROUPES HIÉRARCHIQUES & TAGS IMPRESSION 3D
+    // 5. GROUPES HIÉRARCHIQUES & MARQUAGE IMPRESSION 3D
     // =========================================================================
-    const root = new THREE.Group();
-    scene.add(root);
+    const bodyGroup = new THREE.Group();        // Dalle + murs extérieurs + cloisons + cadres (imprimables)
+    const roofGroup = new THREE.Group();        // Toiture 4 pans étanche + gouttières (imprimable séparément)
+    const glassGroup = new THREE.Group();       // Vitrages transparents + vantaux intérieurs visuels (non imprimables)
+    const furnitureGroup = new THREE.Group();   // Mobilier intérieur & véhicule garage (non imprimables)
+    const terraceGroup = new THREE.Group();     // Terrasse 3,60 m travertin 60×60 (imprimable avec terrain)
+    const terraceGridGroup = new THREE.Group(); // Grille 60×60 accentuée toggleable (non imprimable)
+    const terrainGroup = new THREE.Group();     // Socle terrain en pente + cour gravier (imprimable avec terrain)
+    const envGroup = new THREE.Group();         // PAC, clôtures, arbres, boussole Nord (non imprimables)
 
-    const bodyGroup = new THREE.Group();      // Dalle + Murs extérieurs + Cloisons + Menuiseries (imprimable)
-    const roofGroup = new THREE.Group();      // Toiture 4 pans étanche + gouttières (imprimable séparément)
-    const glassGroup = new THREE.Group();     // Vitrages transparents (non imprimables)
-    const furnitureGroup = new THREE.Group(); // Mobilier intérieur & véhicules (non imprimables)
-    const terraceGroup = new THREE.Group();   // Terrasse travertin continue sous patio (imprimable avec terrain)
-    const terrainGroup = new THREE.Group();   // Socle terrain en pente + cour gravier + Avenue de V (imprimable en mode 4)
-    const envGroup = new THREE.Group();       // PAC, arbres, haies, clôtures, boussole (non imprimables)
-
-    root.add(bodyGroup, roofGroup, glassGroup, furnitureGroup, terraceGroup, terrainGroup, envGroup);
+    worldRoot.add(
+      bodyGroup, roofGroup, glassGroup, furnitureGroup,
+      terraceGroup, terraceGridGroup, terrainGroup, envGroup
+    );
 
     function tagPrintable(mesh, partName, colorHex) {
       mesh.userData.printable = true;
@@ -638,9 +734,9 @@
     }
 
     // =========================================================================
-    // 6. CONSTRUCTEURS DE SOLIDES FERMÉS ÉTANCHES (NORMALES SORTANTES)
+    // 6. OUTILS GÉOMÉTRIQUES ÉTANCHES (NORMALES SORTANTES STRICTES)
     // =========================================================================
-    function addOrientedTri(positions, normals, uvs, a, b, c, expectedDir, uvScale = 0.32, planarXZ = false) {
+    function addOrientedTri(positions, normals, uvs, a, b, c, expectedDir, uvScale = 0.32, planarXZ = false, uvOriginX = 0, uvOriginZ = 0) {
       const ab = new THREE.Vector3().subVectors(b, a);
       const ac = new THREE.Vector3().subVectors(c, a);
       const n = new THREE.Vector3().crossVectors(ab, ac);
@@ -653,7 +749,7 @@
       positions.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
       normals.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
       for (const v of [v1, v2, v3]) {
-        if (planarXZ) uvs.push(v.x * uvScale, v.z * uvScale);
+        if (planarXZ) uvs.push((v.x - uvOriginX) * uvScale, (v.z - uvOriginZ) * uvScale);
         else uvs.push((v.x + v.z) * uvScale, v.y * uvScale);
       }
     }
@@ -696,7 +792,7 @@
       return g;
     }
 
-    function createVerticalPolygonSolid(pointsXZ, yBot, yTop, uvScale = 0.22) {
+    function createVerticalPolygonSolid(pointsXZ, yBot, yTop, uvScale = 0.22, uvOriginX = 0, uvOriginZ = 0) {
       const shapePts = pointsXZ.map(p => new THREE.Vector2(p[0], p[1]));
       const tris = THREE.ShapeUtils.triangulateShape(shapePts, []);
       const pos = [], norm = [], uv = [];
@@ -709,14 +805,14 @@
           new THREE.Vector3(pointsXZ[i0][0], yTop, pointsXZ[i0][1]),
           new THREE.Vector3(pointsXZ[i1][0], yTop, pointsXZ[i1][1]),
           new THREE.Vector3(pointsXZ[i2][0], yTop, pointsXZ[i2][1]),
-          up, uvScale, true
+          up, uvScale, true, uvOriginX, uvOriginZ
         );
         addOrientedTri(
           pos, norm, uv,
           new THREE.Vector3(pointsXZ[i0][0], yBot, pointsXZ[i0][1]),
           new THREE.Vector3(pointsXZ[i1][0], yBot, pointsXZ[i1][1]),
           new THREE.Vector3(pointsXZ[i2][0], yBot, pointsXZ[i2][1]),
-          down, uvScale, true
+          down, uvScale, true, uvOriginX, uvOriginZ
         );
       }
 
@@ -755,25 +851,34 @@
       return new THREE.Vector2(p1.x + d1.x * t, p1.y + d1.y * t);
     }
 
-    // =========================================================================
-    // 7. EMPRISE EXACTE, MURS PORTEURS (0,20 m) & 16 OUVERTURES EXACTES
-    // =========================================================================
-    const WALL_THICK = 0.20;
-    const WALL_HEIGHT = 2.955;
+    // Repère orthonormé local pour l'aile à 45° depuis P1(17.05, 0.00)
+    const SQRT1_2 = Math.SQRT1_2;
+    function uvToPlan(u, v) {
+      return new THREE.Vector2(
+        17.05 + (u - v) * SQRT1_2,
+        (u + v) * SQRT1_2
+      );
+    }
 
-    // Contour extérieur exact (sens horaire en vue de dessus XZ)
+    // =========================================================================
+    // 7. EMPRISE EXTÉRIEURE, MURS PORTEURS (0,32 m) & 16 OUVERTURES EXACTES
+    // =========================================================================
+    const WALL_THICK = 0.32;
+    const WALL_HEIGHT = 2.87; // Arase brute 2,87 m
+
+    // Contour extérieur exact (sens horaire en vue de dessus `(px, pz)`)
     const outerPoly = [
-      new THREE.Vector2(0.00, 0.00),   // P0: Angle NW
-      new THREE.Vector2(17.05, 0.00),  // P1: Angle cassure 45° NE
+      new THREE.Vector2(0.00, 0.00),   // P0: Angle Nord-Ouest
+      new THREE.Vector2(17.05, 0.00),  // P1: Cassure 45° Nord-Est
       new THREE.Vector2(25.55, 8.50),  // P2: Angle extrême Est
-      new THREE.Vector2(20.74, 13.31), // P3: Angle Sud garage
-      new THREE.Vector2(15.35, 7.92),  // P4: Coude patio droite (Cellier)
+      new THREE.Vector2(20.74, 13.31), // P3: Angle Sud-Est garage
+      new THREE.Vector2(15.35, 7.92),  // P4: Angle patio droite (Cellier)
       new THREE.Vector2(12.90, 7.92),  // P5: Fond patio gauche (WC / Entrée)
-      new THREE.Vector2(12.90, 9.36),  // P6: Angle façade séjour / patio
-      new THREE.Vector2(0.00, 9.36)    // P7: Angle SW
+      new THREE.Vector2(12.90, 9.36),  // P6: Angle façade Sud / patio
+      new THREE.Vector2(0.00, 9.36)    // P7: Angle Sud-Ouest
     ];
 
-    // Polygone intérieur exact à 0,20 m par intersections à onglets parfaits
+    // Polygone intérieur exact par intersections de parallèles (onglets 90° & 45° parfaits)
     const innerPoly = [];
     for (let i = 0; i < outerPoly.length; i++) {
       const prevIdx = (i - 1 + outerPoly.length) % outerPoly.length;
@@ -783,7 +888,7 @@
 
       const dPrev = new THREE.Vector2().subVectors(pCurr, pPrev).normalize();
       const dCurr = new THREE.Vector2().subVectors(pNext, pCurr).normalize();
-      const nPrev = new THREE.Vector2(-dPrev.y, dPrev.x); // Normale rentrante
+      const nPrev = new THREE.Vector2(-dPrev.y, dPrev.x);
       const nCurr = new THREE.Vector2(-dCurr.y, dCurr.x);
 
       const l1 = pCurr.clone().addScaledVector(nPrev, WALL_THICK);
@@ -791,57 +896,51 @@
       innerPoly.push(intersectLines2D(l1, dPrev, l2, dCurr));
     }
 
-    // Dalle de sol de la maison (suit exactement outerPoly pour ne pas chevaucher la terrasse du patio)
+    // Dalle de sol de la maison (suit exactement outerPoly)
     const houseFootprintXZ = outerPoly.map(p => [p.x, p.y]);
     const slabMesh = new THREE.Mesh(createVerticalPolygonSolid(houseFootprintXZ, -0.35, 0.00), mat.slab);
     tagPrintable(slabMesh, 'Corps_Maison', '#EAE5DC');
     bodyGroup.add(slabMesh);
 
-    // Vide sanitaire / soubassement descendant dans la pente du terrain
-    const foundationMesh = new THREE.Mesh(createVerticalPolygonSolid(houseFootprintXZ, -1.35, -0.35), mat.foundation);
+    // Soubassement vide sanitaire descendant dans le socle terrain
+    const foundationMesh = new THREE.Mesh(createVerticalPolygonSolid(houseFootprintXZ, -1.45, -0.35), mat.foundation);
     tagPrintable(foundationMesh, 'Socle_Terrain', '#7E8287');
     terrainGroup.add(foundationMesh);
 
-    // Longueurs exactes des segments à 45°
-    const LEN_NE = Math.hypot(25.55 - 17.05, 8.50 - 0.00);   // 12.0208 m
-    const LEN_SE = Math.hypot(20.74 - 25.55, 13.31 - 8.50);  // 6.8024 m
-
-    // Catalogue exhaustif des 16 ouvertures exactes (tous linteaux à Y = 2.15 m)
+    // Catalogue exact des 16 ouvertures extérieures (mesurées en distance `s` depuis le sommet de départ du segment)
     const wallOpenings = {
-      0: [ // Mur arrière NW (Z=0, X: 0 -> 17.05)
-        { s0: 1.67,   s1: 2.67,   y0: 0.90, y1: 2.15, type: 'win1' },       // Chambre 1 (1.00×1.25)
-        { s0: 4.665,  s1: 5.465,  y0: 1.40, y1: 2.15, type: 'win1' },       // Bains (0.80×0.75)
-        { s0: 6.66,   s1: 7.06,   y0: 1.40, y1: 2.15, type: 'win1' },       // WC (0.40×0.75)
-        { s0: 8.085,  s1: 9.085,  y0: 0.90, y1: 2.15, type: 'win1' },       // Chambre 2 (1.00×1.25)
-        { s0: 11.58,  s1: 13.58,  y0: 1.20, y1: 2.15, type: 'win2' },       // Bureau (2.00×0.95)
-        { s0: 15.135, s1: 16.135, y0: 0.90, y1: 2.15, type: 'win1' }        // Chambre 3 (1.00×1.25)
+      0: [ // P0 -> P1 : Façade Nord arrière (17,05 m)
+        { s0: 1.67,   s1: 2.67,   y0: 0.90, y1: 2.15, type: 'win1' },       // Chambre 1 (1,00×1,25)
+        { s0: 4.665,  s1: 5.465,  y0: 1.40, y1: 2.15, type: 'win1' },       // Bains 4,78 m² (0,80×0,75)
+        { s0: 6.66,   s1: 7.06,   y0: 1.40, y1: 2.15, type: 'win1' },       // WC 1,73 m² (0,40×0,75)
+        { s0: 8.085,  s1: 9.085,  y0: 0.90, y1: 2.15, type: 'win1' },       // Chambre 2 (1,00×1,25)
+        { s0: 11.58,  s1: 13.58,  y0: 1.20, y1: 2.15, type: 'win2' },       // Bureau (2,00×0,95)
+        { s0: 15.135, s1: 16.135, y0: 0.90, y1: 2.15, type: 'win1' }        // Chambre 3 (1,00×1,25)
       ],
-      1: [ // Mur arrière-droit NE 45° (P1 -> P2, L=12.0208 m)
-        // Fenêtre Bains parentale à 7.47 m depuis P2 (largeur 0.80 m) -> depuis P1 : [3.7508 .. 4.5508]
-        { s0: LEN_NE - 8.27, s1: LEN_NE - 7.47, y0: 1.20, y1: 2.15, type: 'win1' },
-        // Porte de service garage à 4.10 m depuis P2 (largeur 0.90 m) -> depuis P1 : [7.0208 .. 7.9208]
-        { s0: LEN_NE - 5.00, s1: LEN_NE - 4.10, y0: 0.00, y1: 2.15, type: 'serviceDoor' }
+      1: [ // P1 -> P2 : Façade Nord-Est 45° (12,02 m)
+        { s0: 3.75, s1: 4.55, y0: 1.20, y1: 2.15, type: 'win1' },           // Bains parentale (0,80×0,95)
+        { s0: 7.02, s1: 7.92, y0: 0.00, y1: 2.15, type: 'serviceDoor' }     // Porte service garage (0,90×2,15)
       ],
-      2: [ // Mur pignon garage SE (P2 -> P3, L=6.8024 m) — STRICTEMENT UNE SEULE FENÊTRE 1.80 × 0.75 m, allège 1.40 m, centrée
-        { s0: (LEN_SE - 1.80) * 0.5, s1: (LEN_SE + 1.80) * 0.5, y0: 1.40, y1: 2.15, type: 'winHorizontal' }
+      2: [ // P2 -> P3 : Pignon garage Sud-Est (6,80 m) — STRICTEMENT 1 SEULE FENÊTRE 1,80 m × 0,75 m, allège 1,40 m
+        { s0: 2.50, s1: 4.30, y0: 1.40, y1: 2.15, type: 'winHorizontal' }
       ],
-      3: [ // Mur façade avant-droite 45° (P3 -> P4, L=7.6226 m) : porte garage 5.00 m à 0.70 m de P3
-        { s0: 0.70, s1: 5.70, y0: 0.00, y1: 2.15, type: 'garageDoor' }
+      3: [ // P3 -> P4 : Façade avant garage 45° (7,62 m)
+        { s0: 0.70, s1: 5.70, y0: 0.00, y1: 2.15, type: 'garageDoor' }      // Porte garage double (5,00×2,15)
       ],
-      4: [ // Mur en retrait du patio (P4(15.35,7.92) -> P5(12.90,7.92), sens -X)
-        { s0: 15.35 - 15.00, s1: 15.35 - 14.40, y0: 1.40, y1: 2.15, type: 'win1' }, // Cellier (0.60×0.75)
-        { s0: 15.35 - 13.55, s1: 15.35 - 13.10, y0: 1.40, y1: 2.15, type: 'win1' }  // WC (0.45×0.75)
+      4: [ // P4(15.35,7.92) -> P5(12.90,7.92) : Mur Nord du patio en retrait (2,45 m, sens -px)
+        { s0: 15.35 - 15.10, s1: 15.35 - 14.50, y0: 1.40, y1: 2.15, type: 'win1' }, // Cellier (0,60×0,75)
+        { s0: 15.35 - 13.45, s1: 15.35 - 12.95, y0: 1.40, y1: 2.15, type: 'win1' }  // WC 1,64 m² (0,50×0,75)
       ],
-      5: [ // Mur retour patio (P5(12.90,7.92) -> P6(12.90,9.36), sens +Z)
-        { s0: 8.04 - 7.92, s1: 8.94 - 7.92, y0: 0.00, y1: 2.15, type: 'frontDoor' } // Porte d'entrée (0.90×2.15)
+      5: [ // P5(12.90,7.92) -> P6(12.90,9.36) : Mur Ouest retour patio (1,44 m, sens +pz)
+        { s0: 8.04 - 7.92, s1: 8.94 - 7.92, y0: 0.00, y1: 2.15, type: 'frontDoor' } // Porte d'entrée (0,90×2,15)
       ],
-      6: [ // Mur façade séjour (P6(12.90,9.36) -> P7(0.00,9.36), sens -X)
-        { s0: 12.90 - 12.33, s1: 12.90 - 11.73, y0: 0.00, y1: 2.15, type: 'fixedTall' }, // Châssis fixe entrée (0.60×2.15)
-        { s0: 12.90 - 10.11, s1: 12.90 - 8.51,  y0: 1.20, y1: 2.15, type: 'win2' },      // Fenêtre cuisine (1.60×0.95)
-        { s0: 12.90 - 6.95,  s1: 12.90 - 4.15,  y0: 0.00, y1: 2.15, type: 'slider2' }    // Baie séjour (2.80×2.15)
+      6: [ // P6(12.90,9.36) -> P7(0.00,9.36) : Façade Sud principale (12,90 m, sens -px)
+        { s0: 12.90 - 12.33, s1: 12.90 - 11.73, y0: 0.00, y1: 2.15, type: 'fixedTall' }, // Fixe entrée (0,60×2,15)
+        { s0: 12.90 - 10.11, s1: 12.90 - 8.51,  y0: 1.20, y1: 2.15, type: 'win2' },      // Cuisine (1,60×0,95)
+        { s0: 12.90 - 6.95,  s1: 12.90 - 4.15,  y0: 0.00, y1: 2.15, type: 'slider2' }    // Baie séjour (2,80×2,15)
       ],
-      7: [ // Mur pignon gauche SW (P7(0,9.36) -> P0(0,0), sens -Z)
-        { s0: 9.36 - 7.79, s1: 9.36 - 5.19, y0: 0.00, y1: 2.15, type: 'slider2' }        // Baie séjour SW (2.60×2.15)
+      7: [ // P7(0.00,9.36) -> P0(0.00,0.00) : Pignon Ouest (9,36 m, sens -pz)
+        { s0: 1.57, s1: 4.17, y0: 0.00, y1: 2.15, type: 'slider2' }                      // Baie salon (2,60×2,15)
       ]
     };
 
@@ -857,12 +956,12 @@
       frameGrp.rotation.y = rotY;
       bodyGroup.add(frameGrp);
 
-      const glassGrp = new THREE.Group();
-      glassGrp.position.set(centerXZ.x, op.y0, centerXZ.y);
-      glassGrp.rotation.y = rotY;
-      glassGroup.add(glassGrp);
+      const glassHolder = new THREE.Group();
+      glassHolder.position.set(centerXZ.x, op.y0, centerXZ.y);
+      glassHolder.rotation.y = rotY;
+      glassGroup.add(glassHolder);
 
-      const addBox = (parent, w, h, d, x, y, z, material, printable = true, colorHex = '#383E42') => {
+      const addBox = (parent, w, h, d, x, y, z, material, printable = true, colorHex = '#2F353B') => {
         const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
         m.position.set(x, y, z);
         if (printable) tagPrintable(m, 'Menuiseries', colorHex);
@@ -870,25 +969,25 @@
         return m;
       };
 
-      const fD = 0.08;
-      const fZ = thickness * 0.14;
+      const fD = 0.09;
+      const fZ = thickness * 0.16;
       const fT = 0.055;
 
       // Appui de fenêtre en relief extérieur si allège > 0
       if (op.y0 > 0.05) {
-        addBox(frameGrp, width + 0.08, 0.06, thickness + 0.06, 0, 0.02, -0.02, mat.sill, true, '#E3DFD6');
+        addBox(frameGrp, width + 0.08, 0.06, thickness + 0.07, 0, 0.02, -0.025, mat.sill, true, '#E3DFD6');
       }
 
       if (op.type === 'garageDoor') {
-        addBox(frameGrp, fT, height, 0.09, -width / 2 + fT / 2, height / 2, fZ, mat.anthracite);
-        addBox(frameGrp, fT, height, 0.09,  width / 2 - fT / 2, height / 2, fZ, mat.anthracite);
-        addBox(frameGrp, width, fT, 0.09, 0, height - fT / 2, fZ, mat.anthracite);
+        addBox(frameGrp, fT, height, 0.10, -width / 2 + fT / 2, height / 2, fZ, mat.anthracite);
+        addBox(frameGrp, fT, height, 0.10,  width / 2 - fT / 2, height / 2, fZ, mat.anthracite);
+        addBox(frameGrp, width, fT, 0.10, 0, height - fT / 2, fZ, mat.anthracite);
         const panelW = width - fT * 2 + 0.02;
         const innerH = height - fT;
         const slats = 4;
         const slatH = innerH / slats;
         for (let k = 0; k < slats; k++) {
-          addBox(frameGrp, panelW, slatH - 0.015, 0.055, 0, k * slatH + slatH / 2, fZ + 0.02, mat.anthracite);
+          addBox(frameGrp, panelW, slatH - 0.016, 0.06, 0, k * slatH + slatH / 2, fZ + 0.02, mat.anthracite);
         }
         return;
       }
@@ -903,8 +1002,8 @@
         addBox(frameGrp, innerW * 0.24, innerH, 0.055,  innerW * 0.38, innerH / 2, fZ + 0.01, mat.anthracite);
         addBox(frameGrp, innerW * 0.16, 0.24, 0.055, innerW * 0.19, 0.12, fZ + 0.01, mat.anthracite);
         addBox(frameGrp, innerW * 0.16, 0.20, 0.055, innerW * 0.19, innerH - 0.10, fZ + 0.01, mat.anthracite);
-        addBox(frameGrp, 0.028, 0.92, 0.035, -0.22, 1.12, fZ - 0.042, mat.chrome, false);
-        addBox(glassGrp, innerW * 0.15, innerH - 0.44, 0.016, innerW * 0.19, innerH / 2 + 0.02, fZ + 0.01, mat.glass, false);
+        addBox(frameGrp, 0.028, 0.92, 0.036, -0.22, 1.12, fZ - 0.045, mat.chrome, false);
+        addBox(glassHolder, innerW * 0.15, innerH - 0.44, 0.016, innerW * 0.19, innerH / 2 + 0.02, fZ + 0.01, mat.glass, false);
         return;
       }
 
@@ -917,23 +1016,23 @@
         return;
       }
 
-      // Dormant périphérique RAL 7016
+      // Cadre périphérique RAL 7016
       addBox(frameGrp, fT, height, fD, -width / 2 + fT / 2, height / 2, fZ, mat.anthracite);
       addBox(frameGrp, fT, height, fD,  width / 2 - fT / 2, height / 2, fZ, mat.anthracite);
       addBox(frameGrp, width, fT, fD, 0, height - fT / 2, fZ, mat.anthracite);
       addBox(frameGrp, width, fT, fD, 0, fT / 2, fZ, mat.anthracite);
 
-      // Meneau central sur fenêtres 2 vantaux et baies coulissantes
+      // Meneau central sur 2 vantaux & baies coulissantes
       if (op.type === 'win2' || op.type === 'slider2') {
         const mW = op.type === 'slider2' ? 0.065 : 0.055;
         addBox(frameGrp, mW, height - fT * 2, fD * 0.9, 0, height / 2, fZ, mat.anthracite);
       }
 
-      // Vitrage (non imprimable pour garder les ouvertures franches)
-      addBox(glassGrp, width - fT * 1.6, height - fT * 1.6, 0.016, 0, height / 2, fZ, mat.glass, false);
+      // Vitrage visuel semi-transparent (exclu de l'export 3D)
+      addBox(glassHolder, width - fT * 1.6, height - fT * 1.6, 0.016, 0, height / 2, fZ, mat.glass, false);
     }
 
-    // Construction des 8 murs extérieurs découpés proprement (trumeaux, allèges, linteaux)
+    // Assemblage des 8 murs extérieurs avec réservations réelles en 3D
     for (let i = 0; i < outerPoly.length; i++) {
       const pA = outerPoly[i];
       const pB = outerPoly[(i + 1) % outerPoly.length];
@@ -960,19 +1059,19 @@
         if (op.s0 > cursor + 0.004) {
           const a = getPairAt(cursor), b = getPairAt(op.s0);
           const m = new THREE.Mesh(createMiteredPrism(a.o, b.o, a.i, b.i, 0, WALL_HEIGHT), mat.extWall);
-          tagPrintable(m, 'Corps_Maison', '#F6F5F0');
+          tagPrintable(m, 'Corps_Maison', '#F3F1EC');
           bodyGroup.add(m);
         }
 
         const opA = getPairAt(op.s0), opB = getPairAt(op.s1);
         if (op.y0 > 0.004) {
           const sill = new THREE.Mesh(createMiteredPrism(opA.o, opB.o, opA.i, opB.i, 0, op.y0), mat.extWall);
-          tagPrintable(sill, 'Corps_Maison', '#F6F5F0');
+          tagPrintable(sill, 'Corps_Maison', '#F3F1EC');
           bodyGroup.add(sill);
         }
         if (op.y1 < WALL_HEIGHT - 0.004) {
           const lintel = new THREE.Mesh(createMiteredPrism(opA.o, opB.o, opA.i, opB.i, op.y1, WALL_HEIGHT), mat.extWall);
-          tagPrintable(lintel, 'Corps_Maison', '#F6F5F0');
+          tagPrintable(lintel, 'Corps_Maison', '#F3F1EC');
           bodyGroup.add(lintel);
         }
 
@@ -983,25 +1082,22 @@
       if (segLen > cursor + 0.004) {
         const a = getPairAt(cursor), b = getPairAt(segLen);
         const m = new THREE.Mesh(createMiteredPrism(a.o, b.o, a.i, b.i, 0, WALL_HEIGHT), mat.extWall);
-        tagPrintable(m, 'Corps_Maison', '#F6F5F0');
+        tagPrintable(m, 'Corps_Maison', '#F3F1EC');
         bodyGroup.add(m);
       }
     }
 
-    // Descentes d'eaux pluviales alu aux angles (détails visuels, non imprimables)
-    [[-0.07, -0.07], [17.09, -0.07], [25.63, 8.50], [12.83, 9.43], [-0.07, 9.43]].forEach(([dx, dz]) => {
-      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.86, 10), mat.gutterAlu);
-      pipe.position.set(dx, 1.43, dz);
-      pipe.castShadow = true;
-      bodyGroup.add(pipe);
-    });
-
     // =========================================================================
-    // 8. AMÉNAGEMENT INTÉRIEUR & FORME EXACTE DU CELLIER (7 SOMMETS = 7,98 m²)
+    // 8. CLOISONS INTÉRIEURES EXACTES (2,50 m) & CORRECTIONS DE PORTES
     // =========================================================================
     const INT_H = 2.50;
     const INT_T = 0.08;
 
+    /**
+     * Construit une cloison droite de (x1,z1) à (x2,z2) avec découpes de portes réelles
+     * et vantaux de portes intérieures entrouverts (non imprimables pour laisser les baies franches).
+     * door.swing : +1 ou -1 (sens d'ouverture par rapport à la normale gauche du mur)
+     */
     function addPartition(x1, z1, x2, z2, doors = [], thick = INT_T, height = INT_H) {
       const pA = new THREE.Vector2(x1, z1);
       const pB = new THREE.Vector2(x2, z2);
@@ -1026,15 +1122,40 @@
       };
 
       for (const d of sorted) {
-        if (d.s0 > cursor) placeWall(cursor, d.s0, 0, height);
-        const top = d.h || 2.04;
-        if (top < height) placeWall(d.s0, d.s1, top, height);
+        if (d.s0 > cursor + 0.002) placeWall(cursor, d.s0, 0, height);
+        const doorH = d.h || 2.04;
+        if (doorH < height - 0.002) placeWall(d.s0, d.s1, doorH, height);
+
+        // Vantail de porte intérieure entrouvert à 55° (purement visuel dans glassGroup)
+        if (!d.noLeaf) {
+          const leafW = (d.s1 - d.s0) - 0.03;
+          const hingeS = d.hingeEnd ? d.s1 - 0.015 : d.s0 + 0.015;
+          const hingePt = pA.clone().addScaledVector(u, hingeS);
+          const pivot = new THREE.Group();
+          pivot.position.set(hingePt.x, 0, hingePt.y);
+          const swingDir = d.swing || 1;
+          const baseDir = d.hingeEnd ? Math.PI : 0;
+          pivot.rotation.y = rotY + baseDir + swingDir * 0.96; // Ouvert ~55°
+
+          const leaf = new THREE.Mesh(new THREE.BoxGeometry(leafW, doorH - 0.02, 0.04), mat.doorLeaf);
+          leaf.position.set(leafW * 0.5, (doorH - 0.02) * 0.5, 0);
+          leaf.castShadow = true;
+          leaf.receiveShadow = true;
+          pivot.add(leaf);
+
+          const handle = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.022, 0.08), mat.chrome);
+          handle.position.set(leafW - 0.09, 1.02, 0);
+          pivot.add(handle);
+
+          glassGroup.add(pivot);
+        }
+
         cursor = d.s1;
       }
-      if (cursor < len) placeWall(cursor, len, 0, height);
+      if (cursor < len - 0.002) placeWall(cursor, len, 0, height);
     }
 
-    // Revêtements de sol intérieurs (visuels, non imprimables, posés à Y = 0.005..0.009)
+    // --- Revêtements de sol intérieurs (visuels, non imprimables) ---
     function addFloorZone(ptsXZ, material, y = 0.006) {
       const shape = new THREE.Shape(ptsXZ.map(([x, z]) => new THREE.Vector2(x, -z)));
       const geom = new THREE.ShapeGeometry(shape);
@@ -1045,104 +1166,146 @@
       bodyGroup.add(m);
     }
 
-    // Fond carrelage général partie habitable (hors garage)
+    // Points exacts de jonction de l'aile 45° (P1 = (17.05, 0.00))
+    const ptBainsNE    = uvToPlan(2.70, 0.32); // (18.733, 2.135)
+    const ptBainsDresA = uvToPlan(2.70, 1.96); // (17.573, 3.295)
+    const ptBainsDresB = uvToPlan(5.56, 1.96); // (19.596, 5.317)
+    const ptCelDresA   = uvToPlan(2.70, 4.43); // (15.827, 5.042)
+    const ptCelDresB   = uvToPlan(5.56, 4.43); // (17.849, 7.064)
+    const ptGarWallNE  = uvToPlan(5.66, 0.32); // (20.826, 4.228)
+    const ptGarWallSW  = uvToPlan(5.66, 6.48); // (16.470, 8.584)
+    const ptGarFaceSW  = uvToPlan(5.56, 6.48); // (16.400, 8.514)
+    const ptGarNE      = uvToPlan(11.70, 0.32);
+    const ptGarSE      = uvToPlan(11.70, 6.48);
+    const ptCelStep    = new THREE.Vector2(14.91, 5.96); // Retour 45° du cellier vers le couloir
+
+    // Carrelage général pièces de vie, entrée, couloir, dégagement
     addFloorZone([
-      [0.20, 0.20], [16.96, 0.20], [20.88, 4.12], [16.36, 8.64],
-      [15.43, 7.72], [12.70, 7.72], [12.70, 9.16], [0.20, 9.16]
+      [0.32, 0.32], [16.92, 0.32], [ptGarWallNE.x, ptGarWallNE.y], [ptGarWallSW.x, ptGarWallSW.y],
+      [15.48, 7.60], [12.58, 7.60], [12.58, 9.04], [0.32, 9.04]
     ], mat.floorLiving, 0.005);
 
     // Parquet Chambres 1, 2, 3 & Bureau
-    addFloorZone([[0.20, 0.20], [3.95, 0.20], [3.95, 4.15], [0.20, 4.15]], mat.floorWood, 0.008);       // Ch 1
-    addFloorZone([[7.30, 0.20], [10.76, 0.20], [10.76, 4.15], [7.30, 4.15]], mat.floorWood, 0.008);     // Ch 2
-    addFloorZone([[10.76, 0.20], [14.35, 0.20], [14.35, 4.41], [10.76, 4.41]], mat.floorWood, 0.008);   // Bureau
-    addFloorZone([[14.35, 0.20], [16.96, 0.20], [18.86, 2.09], [15.95, 5.00], [14.35, 4.41]], mat.floorWood, 0.008); // Ch 3
-
-    // Sol distinct du Cellier (polygone exact à 7 sommets = 7,98 m²)
-    const cellierPolyXZ = [
-      [14.08, 7.72],
-      [15.43, 7.72],
-      [16.355, 8.645],
-      [17.975, 7.025],
-      [15.95, 5.00],
-      [15.15, 5.80],
-      [14.08, 5.80]
-    ];
-    addFloorZone(cellierPolyXZ, mat.floorCellier, 0.009);
-
-    // Sol béton lissé Garage (exact 6,00 m × 6,40 m = 38,40 m²)
+    addFloorZone([[0.32, 0.32], [4.05, 0.32], [4.05, 3.94], [0.32, 3.94]], mat.floorWood, 0.008);
+    addFloorZone([[7.45, 0.32], [10.90, 0.32], [10.90, 3.94], [7.45, 3.94]], mat.floorWood, 0.008);
+    addFloorZone([[10.90, 0.32], [14.57, 0.32], [14.57, 4.25], [10.90, 4.25]], mat.floorWood, 0.008);
     addFloorZone([
-      [21.02, 4.26], [25.27, 8.50], [20.74, 13.03], [16.50, 8.78]
-    ], mat.floorGarage, 0.008);
+      [14.57, 0.32], [16.92, 0.32], [ptBainsNE.x, ptBainsNE.y], [ptCelDresA.x, ptCelDresA.y], [14.57, 4.25]
+    ], mat.floorWood, 0.008);
 
-    // --- MUR ISOLANT GARAGE / MAISON (épaisseur 0,20 m, axe X + Z = 25.14) ---
-    // Face garage : X + Z = 25.28 | Face maison : X + Z = 25.00
-    // De l'angle NE intérieur (20.953, 4.187) à l'angle SE intérieur (16.427, 8.713), L = 6.402 m
-    // Porte Cellier -> Garage entre s = 4.65 et s = 5.48 (dans le segment Cellier 4.11..6.40)
-    addPartition(20.953, 4.187, 16.427, 8.713, [{ s0: 4.68, s1: 5.51 }], 0.20, INT_H);
+    // Carrelage SDB principale, Bains parentale & Dressing
+    addFloorZone([[4.05, 0.32], [6.45, 0.32], [6.45, 2.32], [4.05, 2.32]], mat.floorBath, 0.008);
+    addFloorZone([
+      [ptBainsNE.x, ptBainsNE.y], [uvToPlan(5.56, 0.32).x, uvToPlan(5.56, 0.32).y],
+      [ptBainsDresB.x, ptBainsDresB.y], [ptBainsDresA.x, ptBainsDresA.y]
+    ], mat.floorBath, 0.009);
+    addFloorZone([
+      [ptBainsDresA.x, ptBainsDresA.y], [ptBainsDresB.x, ptBainsDresB.y],
+      [ptCelDresB.x, ptCelDresB.y], [ptCelDresA.x, ptCelDresA.y]
+    ], mat.floorWood, 0.009);
 
-    // --- CLOISONS EXACTES DU CELLIER (7 SOMMETS) & SUITE PARENTALE ---
-    // 1. Cloison commune Cellier / Dressing : C4(17.975, 7.025) -> C5(15.95, 5.00) (L = 2.864 m)
-    addPartition(17.975, 7.025, 15.95, 5.00, []);
+    // Sol Cellier (polygone exact 7 sommets = 7,98 m²)
+    addFloorZone([
+      [13.65, 7.60],
+      [15.48, 7.60],
+      [ptGarFaceSW.x, ptGarFaceSW.y],
+      [ptCelDresB.x, ptCelDresB.y],
+      [ptCelDresA.x, ptCelDresA.y],
+      [ptCelStep.x, ptCelStep.y],
+      [13.65, 5.96]
+    ], mat.floorCellier, 0.009);
 
-    // 2. Pan coupé à 45° du Cellier côté dégagement Chambre 3 : C5(15.95, 5.00) -> C6(15.15, 5.80) (L = 1.131 m)
-    addPartition(15.95, 5.00, 15.15, 5.80, []);
+    // Sol béton lissé Garage (légèrement décaissé à y = -0.025)
+    addFloorZone([
+      [uvToPlan(5.76, 0.32).x, uvToPlan(5.76, 0.32).y],
+      [ptGarNE.x, ptGarNE.y],
+      [ptGarSE.x, ptGarSE.y],
+      [uvToPlan(5.76, 6.48).x, uvToPlan(5.76, 6.48).y]
+    ], mat.floorGarage, 0.007);
 
-    // 3. Cloison Nord du Cellier (accès depuis Entrée) : C6(15.15, 5.80) -> C7(14.08, 5.80) (L = 1.07 m, porte ISO 83)
-    addPartition(15.15, 5.80, 14.08, 5.80, [{ s0: 0.12, s1: 0.95 }]);
+    // -------------------------------------------------------------------------
+    // 8A. AILE NUIT NORD-OUEST & DÉCROCHAGE PIÈCES DE VIE / DÉGAGEMENT (4,93 m²)
+    // -------------------------------------------------------------------------
+    // Mur droit au sud de Chambre 1 + placard Dégagement (2,17 m) : px = 0.32 -> 6.29 à pz = 3.94
+    addPartition(0.32, 3.94, 6.29, 3.94, []);
 
-    // 4. Cloison Cellier / WC d'entrée : C7(14.08, 5.80) -> C1(14.08, 7.72)
-    addPartition(14.08, 5.80, 14.08, 7.72, []);
+    // *** CORRECTION CRITIQUE : DÉCROCHAGE ENTRE PIÈCES DE VIE ET DÉGAGEMENT ***
+    // Retour vers le Nord de 0,62 m à px = 6.29 (pz = 3.94 -> 3.32)
+    addPartition(6.29, 3.94, 6.29, 3.32, []);
+    // Cloison en retrait au fond du décrochage (pz = 3.32, px = 6.29 -> 7.42) avec porte PP 83 (px = 6.38..7.21)
+    addPartition(6.29, 3.32, 7.42, 3.32, [{ s0: 0.09, s1: 0.92, swing: -1 }]);
+    // Retour vers le Sud à px = 7.42 (inclus dans la cloison Ouest de Chambre 2 : pz = 0.32 -> 3.94)
+    addPartition(7.42, 0.32, 7.42, 3.94, [{ s0: 2.08, s1: 2.91, swing: 1 }]); // Porte Ch2 (pz = 2.40..3.23)
 
-    // 5. WC d'entrée (1,64 m² : X=13.00..14.04, Z=5.84..7.72)
-    addPartition(12.96, 5.80, 14.08, 5.80, []);
-    addPartition(12.96, 5.80, 12.96, 7.72, [{ s0: 0.16, s1: 0.96 }]); // Porte WC sur Entrée
+    // Cloison Est de Chambre 1 (px = 4.05, pz = 0.32 -> 3.94) avec porte PP 83 (pz = 2.40..3.23)
+    addPartition(4.05, 0.32, 4.05, 3.94, [{ s0: 2.08, s1: 2.91, swing: -1 }]);
 
-    // 6. Dressing (6,79 m² : 2,37 × 2,865 m) & Bains parentale (4,58 m² : 1,60 × 2,865 m)
-    // Cloison Dressing / Bains parentale (X - Z = 14.30) : (17.625, 3.325) -> (19.65, 5.35)
-    addPartition(17.625, 3.325, 19.65, 5.35, [{ s0: 0.45, s1: 1.25 }]);
-    // Cloison Chambre 3 / (Dressing + Bains parentale) sur X + Z = 20.95 :
-    // De l'angle NE intérieur (18.858, 2.092) -> C5(15.95, 5.00), porte Chambre 3 -> Dressing
-    addPartition(18.858, 2.092, 15.95, 5.00, [{ s0: 2.35, s1: 3.18 }]);
-    // Cloison fermeture Chambre 3 depuis Entrée : (14.35, 4.41) -> C5(15.95, 5.00) avec porte PP 83
-    addPartition(14.35, 4.41, 15.95, 5.00, [{ s0: 0.42, s1: 1.25 }]);
+    // Salle de bains (4,78 m²) & WC (1,73 m²)
+    addPartition(6.45, 0.32, 6.45, 2.32, []);                                // Bains / WC
+    addPartition(4.05, 2.32, 6.45, 2.32, [{ s0: 0.80, s1: 1.63, swing: -1 }]); // Porte Bains
+    addPartition(6.45, 2.25, 7.42, 2.25, [{ s0: 0.08, s1: 0.91, swing: -1 }]); // Porte WC 1,73 m²
 
-    // --- ZONE NUIT NORD-OUEST & PIÈCE DE VIE / ENTRÉE ---
-    // Axe horizontal séparant Zone Nuit (Z=0.20..4.15) et Pièce de vie (Z=4.15..9.16)
-    addPartition(0.20, 4.15, 6.26, 4.15, []);                          // Fond placards Ch1 + Dgt
-    addPartition(6.26, 4.15, 7.34, 4.15, [{ s0: 0.12, s1: 0.96 }]);    // Porte Dégagement -> Pièce de vie
-    addPartition(7.34, 4.15, 10.76, 4.15, []);                         // Fond placard Ch2
+    // Chambre 2 (12,00 m²) : mur Sud (pz = 3.94) & mur Est (px = 10.90)
+    addPartition(7.42, 3.94, 10.90, 3.94, []);
+    addPartition(10.90, 0.32, 10.90, 4.25, []);
 
-    // Chambre 1 / (Bains + Dégagement) à X = 3.97
-    addPartition(3.97, 0.20, 3.97, 4.15, [{ s0: 2.65, s1: 3.48 }]);    // Porte Chambre 1
-    // Bains / WC à X = 6.22
-    addPartition(6.22, 0.20, 6.22, 2.56, []);
-    // Bains / Dégagement à Z = 2.56
-    addPartition(3.97, 2.56, 6.22, 2.56, [{ s0: 0.85, s1: 1.68 }]);    // Porte Bains
-    // WC / Dégagement à Z = 2.05
-    addPartition(6.22, 2.05, 7.30, 2.05, [{ s0: 0.14, s1: 0.94 }]);    // Porte WC
-    // Dégagement / Chambre 2 à X = 7.30
-    addPartition(7.30, 0.20, 7.30, 4.15, [{ s0: 2.65, s1: 3.48 }]);    // Porte Chambre 2
+    // Bureau (14,11 m²) : mur Sud à pz = 4.25 (décalé de 0,31 m vers le Sud) & porte PP 83 vers couloir
+    addPartition(10.90, 4.25, 14.57, 4.25, [{ s0: 2.65, s1: 3.48, swing: -1 }]); // px = 13.55..14.38
+    addPartition(14.57, 0.32, 14.57, 4.25, []);                                  // Bureau / Chambre 3
 
-    // Chambre 2 / Bureau à X = 10.76
-    addPartition(10.76, 0.20, 10.76, 4.41, []);
-    // Bureau / Entrée à Z = 4.41
-    addPartition(10.76, 4.41, 14.35, 4.41, [{ s0: 2.25, s1: 3.08 }]);  // Porte Bureau
-    // Bureau / Chambre 3 à X = 14.35
-    addPartition(14.35, 0.20, 14.35, 4.41, []);
+    // Placard d'entrée séparant Cuisine et couloir d'Entrée (px = 10.25..10.87, pz = 5.95..9.04)
+    addPartition(10.87, 5.95, 10.87, 9.04, []);
+    addPartition(10.25, 5.95, 10.87, 5.95, []);
+    addPartition(10.25, 5.95, 10.25, 9.04, []);
 
-    // Cloison placard Entrée / Pièce de vie (X = 11.00, Z = 6.10..9.16)
-    addPartition(11.00, 6.10, 11.00, 9.16, []);
-    addPartition(11.00, 6.10, 11.72, 6.10, []);
+    // -------------------------------------------------------------------------
+    // 8B. WC D'ENTRÉE (1,64 m²) — CORRECTION CRITIQUE PORTE SUR MUR COULOIR
+    // -------------------------------------------------------------------------
+    // Mur OUEST (px = 12.58, pz = 5.96 -> 7.60) : PORTE PP 83 DONNANT DANS LE COULOIR (pz = 6.04..6.87)
+    addPartition(12.58, 5.96, 12.58, 7.60, [{ s0: 0.08, s1: 0.91, swing: -1 }]);
+    // Mur NORD (pz = 5.96, px = 12.58 -> 13.65) : COMPLETEMENT PLEIN (AUCUNE PORTE)
+    addPartition(12.58, 5.96, 13.65, 5.96, []);
+    // Mur EST (px = 13.65, pz = 5.96 -> 7.60) : COMPLETEMENT PLEIN (partagé avec Cellier)
+    addPartition(13.65, 5.96, 13.65, 7.60, []);
+
+    // -------------------------------------------------------------------------
+    // 8C. CELLIER (7,98 m² — 7 SOMMETS), SUITE PARENTALE & GARAGE (38,40 m²)
+    // -------------------------------------------------------------------------
+    // Mur isolant Garage / Maison (épaisseur 0,20 m, à u = 5.66) avec porte Cellier -> Garage (PP 83)
+    // Longueur totale = 6,16 m ; segment Cellier = v 4.43..6.48 (s = 4.11..6.16)
+    addPartition(ptGarWallNE.x, ptGarWallNE.y, ptGarWallSW.x, ptGarWallSW.y, [{ s0: 4.55, s1: 5.38, swing: 1 }], 0.20, WALL_HEIGHT);
+
+    // Cloison commune Cellier / Dressing (2,86 m) : C5(ptCelDresA) -> C4(ptCelDresB)
+    addPartition(ptCelDresA.x, ptCelDresA.y, ptCelDresB.x, ptCelDresB.y, []);
+
+    // Pan coupé à 45° du Cellier côté couloir : C5(ptCelDresA) -> C6(14.91, 5.96)
+    addPartition(ptCelDresA.x, ptCelDresA.y, ptCelStep.x, ptCelStep.y, []);
+
+    // Mur Nord du Cellier donnant sur le couloir : (13.65, 5.96) -> (14.91, 5.96) avec porte ISO 83
+    addPartition(13.65, 5.96, ptCelStep.x, ptCelStep.y, [{ s0: 0.16, s1: 0.99, swing: 1 }]);
+
+    // *** CORRECTION CRITIQUE : PORTE DE LA SALLE DE BAIN PARENTALE DONNANT DANS LA CHAMBRE 3 ***
+    // Cloison NW de Bains parentale (u = 2.70, v = 0.32..1.96, L = 1,64 m) -> PORTE PP 83 vers Chambre 3 !
+    addPartition(ptBainsNE.x, ptBainsNE.y, ptBainsDresA.x, ptBainsDresA.y, [{ s0: 0.36, s1: 1.19, swing: 1 }]);
+
+    // Cloison entre Bains parentale et Dressing (v = 1.96, u = 2.70..5.56) -> COMPLETEMENT PLEINE (aucune porte)
+    addPartition(ptBainsDresA.x, ptBainsDresA.y, ptBainsDresB.x, ptBainsDresB.y, []);
+
+    // Cloison NW de Dressing (u = 2.70, v = 1.96..4.43, L = 2,47 m) -> accès Dressing depuis Chambre 3 au centre
+    addPartition(ptBainsDresA.x, ptBainsDresA.y, ptCelDresA.x, ptCelDresA.y, [{ s0: 0.80, s1: 1.66, noLeaf: true }]);
+
+    // Cloison d'entrée Chambre 3 depuis le couloir : (14.57, 4.25) -> ptCelDresA(15.83, 5.04) avec porte PP 83
+    addPartition(14.57, 4.25, ptCelDresA.x, ptCelDresA.y, [{ s0: 0.30, s1: 1.13, swing: -1 }]);
 
     // =========================================================================
-    // 9. MOBILIER INTÉRIEUR STYLISÉ & VÉHICULES (TOGGLEABLE, NON IMPRIMABLE)
+    // 9. MOBILIER STYLISÉ & VÉHICULE (TOGGLEABLE, NON IMPRIMABLE)
     // =========================================================================
     const mWood = new THREE.MeshStandardMaterial({ color: 0xb58a5b, roughness: 0.7 });
     const mFabric = new THREE.MeshStandardMaterial({ color: 0x5c6b78, roughness: 0.9 });
     const mBed = new THREE.MeshStandardMaterial({ color: 0xefece4, roughness: 0.85 });
     const mBlanket = new THREE.MeshStandardMaterial({ color: 0x4d6f80, roughness: 0.88 });
     const mCab = new THREE.MeshStandardMaterial({ color: 0xedeae3, roughness: 0.55 });
-    const mTop = new THREE.MeshStandardMaterial({ color: 0x44484d, roughness: 0.45 });
+    const mTop = new THREE.MeshStandardMaterial({ color: 0x3c4146, roughness: 0.45 });
     const mCeram = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.22 });
 
     function addFurn(w, h, d, x, y, z, material, rotY = 0) {
@@ -1168,67 +1331,80 @@
       furnitureGroup.add(g);
     }
 
-    // Chambres 1, 2, 3
-    addBed(1.40, 1.85, Math.PI / 2, 1.55, 2.00);
-    addBed(9.55, 1.85, -Math.PI / 2, 1.55, 2.00);
-    addBed(15.65, 2.05, -Math.PI / 4, 1.75, 2.05);
+    // Lits Chambres 1, 2, 3
+    addBed(1.42, 1.85, Math.PI / 2, 1.55, 2.00);
+    addBed(9.65, 1.85, -Math.PI / 2, 1.55, 2.00);
+    addBed(15.70, 1.85, -Math.PI / 4, 1.70, 2.00);
 
-    // Placards encastrés
-    addFurn(3.55, 2.25, 0.58, 2.10, 1.125, 3.80, mCab);
-    addFurn(2.05, 2.25, 0.58, 5.10, 1.125, 3.80, mCab);
-    addFurn(3.15, 2.25, 0.58, 9.05, 1.125, 3.80, mCab);
-    addFurn(0.62, 2.25, 2.85, 11.35, 1.125, 7.65, mCab);
+    // Placards encastrés (Ch1, Dgt 2,17 m jusqu'au décrochage, Ch2)
+    addFurn(3.55, 2.25, 0.56, 2.18, 1.125, 3.61, mCab);
+    addFurn(2.10, 2.25, 0.56, 5.18, 1.125, 3.61, mCab);
+    addFurn(3.25, 2.25, 0.56, 9.18, 1.125, 3.61, mCab);
 
-    // SDB principale & WC
-    addFurn(1.70, 0.55, 0.78, 5.10, 0.275, 0.68, mCeram);
-    addFurn(1.05, 0.82, 0.50, 4.65, 0.41, 2.24, mCab);
-    addFurn(0.38, 0.42, 0.56, 6.76, 0.21, 0.58, mCeram);
-    addFurn(0.38, 0.42, 0.56, 13.52, 0.21, 7.36, mCeram); // WC entrée
+    // Bains (4,78 m²) + WC (1,73 m²) + WC Entrée (1,64 m²)
+    addFurn(1.70, 0.55, 0.78, 5.25, 0.275, 0.76, mCeram); // Baignoire
+    addFurn(1.05, 0.82, 0.48, 4.70, 0.41, 2.00, mCab);   // Vasque
+    addFurn(0.38, 0.42, 0.56, 6.95, 0.21, 0.68, mCeram); // WC 1,73 m²
+    // WC 1,64 m² (cuvette au fond Sud + lave-mains d'angle)
+    addFurn(0.38, 0.42, 0.56, 13.12, 0.21, 7.22, mCeram);
+    addFurn(0.34, 0.78, 0.26, 13.42, 0.39, 6.20, mCeram);
 
-    // Bureau
-    addFurn(0.78, 0.75, 1.80, 13.75, 0.375, 2.25, mWood);
-    addFurn(0.85, 0.72, 1.65, 11.38, 0.36, 2.25, mFabric);
+    // Bureau (14,11 m²)
+    addFurn(0.78, 0.75, 1.80, 13.95, 0.375, 2.15, mWood);
+    addFurn(0.85, 0.72, 1.65, 11.45, 0.36, 2.15, mFabric);
 
-    // Cuisine en U (évier sous la fenêtre 1,60 m X=8.51..10.11)
-    addFurn(0.65, 0.90, 3.10, 7.68, 0.45, 7.55, mCab);
-    addFurn(0.70, 0.05, 3.15, 7.68, 0.92, 7.55, mTop);
-    addFurn(2.90, 0.90, 0.65, 9.25, 0.45, 8.78, mCab);
-    addFurn(2.95, 0.05, 0.70, 9.25, 0.92, 8.78, mTop);
-    addFurn(0.65, 2.15, 2.75, 10.60, 1.075, 7.50, mCab);
-    addFurn(0.55, 0.02, 0.62, 7.68, 0.955, 7.20, mat.anthracite);
-    addFurn(0.78, 0.03, 0.46, 9.31, 0.95, 8.78, mat.chrome);
+    // Pièces de vie (55,00 m²) : Salon Ouest + Salle à manger centre + Cuisine en U Est
+    addFurn(2.85, 0.42, 0.95, 2.35, 0.21, 4.75, mFabric);
+    addFurn(2.85, 0.76, 0.22, 2.35, 0.38, 4.38, mFabric);
+    addFurn(0.95, 0.42, 1.80, 3.30, 0.21, 6.05, mFabric);
+    addFurn(0.82, 0.68, 0.82, 1.15, 0.34, 7.60, mFabric, 0.55); // Fauteuil
+    addFurn(1.10, 0.34, 0.72, 1.95, 0.17, 6.40, mWood);         // Table basse
+    addFurn(2.35, 0.46, 0.44, 2.40, 0.23, 8.76, mWood);         // Meuble TV
+    addFurn(1.45, 0.80, 0.05, 2.40, 1.00, 8.92, mat.anthracite);
 
-    // Table à manger + Salon
-    addFurn(1.05, 0.76, 2.25, 5.45, 0.38, 6.55, mWood);
+    // Table à manger + 6 chaises
+    addFurn(1.05, 0.76, 2.25, 5.25, 0.38, 6.50, mWood);
     for (let k = -1; k <= 1; k++) {
-      addFurn(0.42, 0.46, 0.42, 4.72, 0.23, 6.55 + k * 0.68, mFabric);
-      addFurn(0.42, 0.46, 0.42, 6.18, 0.23, 6.55 + k * 0.68, mFabric);
+      addFurn(0.42, 0.46, 0.42, 4.52, 0.23, 6.50 + k * 0.68, mFabric);
+      addFurn(0.42, 0.46, 0.42, 5.98, 0.23, 6.50 + k * 0.68, mFabric);
     }
-    addFurn(2.85, 0.42, 0.95, 2.35, 0.21, 4.85, mFabric);
-    addFurn(2.85, 0.76, 0.22, 2.35, 0.38, 4.48, mFabric);
-    addFurn(0.95, 0.42, 1.85, 3.30, 0.21, 6.15, mFabric);
-    addFurn(1.10, 0.34, 0.72, 1.95, 0.17, 6.55, mWood);
-    addFurn(2.35, 0.46, 0.44, 2.40, 0.23, 8.85, mWood);
-    addFurn(1.45, 0.80, 0.05, 2.40, 1.02, 9.02, mat.anthracite);
 
-    // Cellier (lave-linge, sèche-linge et module technique le long du mur commun Cellier-Dressing)
-    // Axe du mur C5(15.95,5.00) -> C4(17.975,7.025), côté Cellier (-0.42,+0.42)
-    addFurn(0.62, 0.85, 0.62, 16.05, 0.425, 5.75, mCeram, -Math.PI / 4); // Lave-linge
-    addFurn(0.62, 0.85, 0.62, 16.52, 0.425, 6.22, mCeram, -Math.PI / 4); // Sèche-linge
-    addFurn(0.65, 1.80, 0.60, 17.05, 0.90, 6.75, mCab, -Math.PI / 4);    // Module technique / Ballon
+    // Cuisine en U avec bar/îlot, plaque de cuisson et évier sous la fenêtre 1,60 m (px = 8.51..10.11)
+    addFurn(0.68, 0.90, 3.15, 7.45, 0.45, 7.38, mCab);
+    addFurn(0.76, 0.05, 3.20, 7.45, 0.92, 7.38, mTop);
+    addFurn(2.80, 0.90, 0.66, 8.80, 0.45, 8.66, mCab);
+    addFurn(2.85, 0.05, 0.70, 8.80, 0.92, 8.66, mTop);
+    addFurn(0.65, 2.15, 2.65, 9.85, 1.075, 7.25, mCab); // Colonnes four/réfrigérateur
+    addFurn(0.56, 0.02, 0.62, 7.45, 0.955, 7.05, mat.anthracite); // Plaque cuisson
+    addFurn(0.78, 0.03, 0.46, 9.25, 0.95, 8.66, mat.chrome);      // Évier
 
-    // Dressing & Bains parentale (orientés à 45°)
-    addFurn(2.40, 2.15, 0.50, 17.28, 1.075, 5.65, mCab, -Math.PI / 4);
-    addFurn(2.40, 2.15, 0.50, 18.25, 1.075, 4.68, mCab, -Math.PI / 4);
-    addFurn(0.95, 0.08, 1.35, 19.65, 0.04, 3.85, mCeram, -Math.PI / 4);  // Douche italienne
-    addFurn(1.10, 0.82, 0.48, 18.45, 0.41, 3.65, mCab, -Math.PI / 4);    // Vasque
+    // Cellier : lave-linge, sèche-linge et unité technique PAC le long du mur commun Dressing
+    const cAp1 = uvToPlan(3.35, 4.80);
+    const cAp2 = uvToPlan(4.05, 4.80);
+    const cAp3 = uvToPlan(4.85, 4.80);
+    addFurn(0.62, 0.85, 0.62, cAp1.x, 0.425, cAp1.y, mCeram, -Math.PI / 4);
+    addFurn(0.62, 0.85, 0.62, cAp2.x, 0.425, cAp2.y, mCeram, -Math.PI / 4);
+    addFurn(0.68, 1.85, 0.62, cAp3.x, 0.925, cAp3.y, mCab, -Math.PI / 4);
 
-    // Deux véhicules stylisés discrets dans le garage 6,00 × 6,40 m
-    function addGarageCar(cx, cz, hex) {
+    // Dressing : deux linéaires de penderies 2,70 m de chaque côté
+    const dr1 = uvToPlan(4.15, 2.30);
+    const dr2 = uvToPlan(4.15, 4.08);
+    addFurn(2.65, 2.15, 0.54, dr1.x, 1.075, dr1.y, mCab, -Math.PI / 4);
+    addFurn(2.65, 2.15, 0.54, dr2.x, 1.075, dr2.y, mCab, -Math.PI / 4);
+
+    // Bains parentale (4,58 m²) : douche italienne + double vasque
+    const shPos = uvToPlan(5.00, 1.14);
+    const vnPos = uvToPlan(3.95, 1.62);
+    addFurn(0.95, 0.08, 1.48, shPos.x, 0.04, shPos.y, mCeram, -Math.PI / 4);
+    addFurn(1.30, 0.82, 0.50, vnPos.x, 0.41, vnPos.y, mCab, -Math.PI / 4);
+
+    // Silhouette de véhicule stylisé garé dans le garage double (toggleable avec mobilier)
+    function addGarageCar(uPos, vPos, hexColor) {
+      const p = uvToPlan(uPos, vPos);
       const g = new THREE.Group();
-      g.position.set(cx, 0, cz);
+      g.position.set(p.x, 0, p.y);
       g.rotation.y = Math.PI / 4;
-      const cMat = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.35, metalness: 0.45 });
+      const cMat = new THREE.MeshStandardMaterial({ color: hexColor, roughness: 0.34, metalness: 0.46 });
       const body = new THREE.Mesh(new THREE.BoxGeometry(1.80, 0.60, 4.25), cMat); body.position.y = 0.48;
       const cab = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.54, 2.20), cMat); cab.position.set(0, 1.00, -0.15);
       const wMat = new THREE.MeshStandardMaterial({ color: 0x202428, roughness: 0.9 });
@@ -1241,32 +1417,31 @@
       [body, cab].forEach(o => { o.castShadow = true; o.receiveShadow = true; g.add(o); });
       furnitureGroup.add(g);
     }
-    addGarageCar(19.75, 7.65, 0x45566b);
-    addGarageCar(21.65, 9.55, 0xb8bec7);
+    addGarageCar(7.65, 3.45, 0x45566b);
 
     // =========================================================================
-    // 10. TOITURE 4 PANS À 36 % — SOLIDE ÉTANCHE + PATIO COUVERT EN PORTE-À-FAUX
+    // 10. TOITURE 4 PANS À 36 % — SOLIDE FERMÉ ÉTANCHE (DÉBORD 0,40 m)
     // =========================================================================
-    const Y_EAVE = 2.955;
-    const Y_SOFFIT = 2.84;
+    const Y_EAVE = 2.95;
+    const Y_SOFFIT = 2.85;
 
-    // L'avant-toit (débord 0,35 m) file droit au-dessus du patio jusqu'à E4(16.645, 9.71) sans aucun poteau
+    // Égouts exacts à débord 0,40 m tout autour (file droit au-dessus du patio d'entrée)
     const E_XZ = [
-      [-0.35,  -0.35],  // E0: NW
-      [17.195, -0.35],  // E1: NE bend
-      [26.045,  8.50],  // E2: Far-East
-      [20.74,  13.805], // E3: South garage
-      [16.645,  9.71],  // E4: Noue patio / garage
-      [-0.35,   9.71]   // E5: SW
+      [-0.40,   -0.40],   // E0: NW
+      [17.2157, -0.40],   // E1: NE bend
+      [26.1157,  8.50],   // E2: Far-East
+      [20.74,   13.8757], // E3: South garage
+      [16.6243,  9.76],   // E4: Noue patio / garage
+      [-0.40,    9.76]    // E5: SW
     ];
     const ETop = E_XZ.map(([x, z]) => new THREE.Vector3(x, Y_EAVE, z));
     const EBot = E_XZ.map(([x, z]) => new THREE.Vector3(x, Y_SOFFIT, z));
 
-    // Faîtages exacts à 36 % (principal Y = 4,766 m, aile garage Y = 4,305 m)
-    const R0 = new THREE.Vector3(4.68,   4.766, 4.68);
-    const R1 = new THREE.Vector3(15.112, 4.766, 4.68);
-    const R2 = new THREE.Vector3(18.199, 4.305, 5.959);
-    const R3 = new THREE.Vector3(20.74,  4.305, 8.50);
+    // Faîtages exacts à pente uniforme 36 % (principal Y = 4,779 m, aile garage Y = 4,318 m)
+    const R0 = new THREE.Vector3(4.68,    4.7788, 4.68);
+    const R1 = new THREE.Vector3(15.1115, 4.7788, 4.68);
+    const R2 = new THREE.Vector3(18.1988, 4.3184, 5.9588);
+    const R3 = new THREE.Vector3(20.74,   4.3184, 8.50);
 
     const rPos = [], rNorm = [], rUV = [];
     function addRoofSlope(verts, eStart, eEnd) {
@@ -1292,11 +1467,11 @@
       }
     }
 
-    addRoofSlope([ETop[0], ETop[1], R1, R0],     ETop[0], ETop[1]); // Pan arrière NW
-    addRoofSlope([ETop[5], ETop[0], R0],         ETop[5], ETop[0]); // Croupe SW
-    addRoofSlope([ETop[4], ETop[5], R0, R1, R2], ETop[4], ETop[5]); // Pan façade séjour + patio couvert
+    addRoofSlope([ETop[0], ETop[1], R1, R0],     ETop[0], ETop[1]); // Pan Nord
+    addRoofSlope([ETop[5], ETop[0], R0],         ETop[5], ETop[0]); // Croupe Ouest
+    addRoofSlope([ETop[4], ETop[5], R0, R1, R2], ETop[4], ETop[5]); // Pan Sud + patio couvert
     addRoofSlope([ETop[1], ETop[2], R3, R2, R1], ETop[1], ETop[2]); // Pan NE 45°
-    addRoofSlope([ETop[2], ETop[3], R3],         ETop[2], ETop[3]); // Croupe garage SE
+    addRoofSlope([ETop[2], ETop[3], R3],         ETop[2], ETop[3]); // Croupe SE garage
     addRoofSlope([ETop[3], ETop[4], R2, R3],     ETop[3], ETop[4]); // Pan façade garage
 
     const roofTopGeom = new THREE.BufferGeometry();
@@ -1307,7 +1482,7 @@
     tagPrintable(roofTopMesh, 'Toiture', '#B4482D');
     roofGroup.add(roofTopMesh);
 
-    // Fermeture étanche : bandeaux de rive + sous-face PVC blanc horizontale
+    // Fermeture inférieure étanche (bandeaux de rive + sous-face PVC blanc plane à Y = 2,85 m)
     const sPos = [], sNorm = [], sUV = [];
     for (let i = 0; i < E_XZ.length; i++) {
       const next = (i + 1) % E_XZ.length;
@@ -1326,10 +1501,10 @@
     soffitGeom.setAttribute('normal', new THREE.Float32BufferAttribute(sNorm, 3));
     soffitGeom.setAttribute('uv', new THREE.Float32BufferAttribute(sUV, 2));
     const roofSoffitMesh = new THREE.Mesh(soffitGeom, mat.roofSoffit);
-    tagPrintable(roofSoffitMesh, 'Toiture', '#F4F5F7');
+    tagPrintable(roofSoffitMesh, 'Toiture', '#F7F7F7');
     roofGroup.add(roofSoffitMesh);
 
-    // Tuiles faîtières & arêtiers en relief
+    // Faîtières & arêtiers en relief
     [[R0, R1], [R1, R2], [R2, R3], [ETop[0], R0], [ETop[5], R0], [ETop[1], R1], [ETop[2], R3], [ETop[3], R3]]
       .forEach(([a, b]) => {
         const len = a.distanceTo(b);
@@ -1351,7 +1526,7 @@
       roofGroup.add(valley);
     }
 
-    // Gouttières alu corniche alignées à Y_SOFFIT (pour impression 3D à plat sans support)
+    // Gouttières alu corniche alignées à Y_SOFFIT (imprimables à plat sans support)
     for (let i = 0; i < E_XZ.length; i++) {
       const a = ETop[i], b = ETop[(i + 1) % E_XZ.length];
       const dx = b.x - a.x, dz = b.z - a.z;
@@ -1359,64 +1534,129 @@
       const outN = new THREE.Vector3(dz, 0, -dx).normalize();
       const mid = new THREE.Vector3((a.x + b.x) * 0.5, (Y_SOFFIT + Y_EAVE) * 0.5, (a.z + b.z) * 0.5)
         .addScaledVector(outN, 0.06);
-      const gMesh = new THREE.Mesh(new THREE.BoxGeometry(len + 0.14, 0.115, 0.105), mat.gutterAlu);
+      const gMesh = new THREE.Mesh(new THREE.BoxGeometry(len + 0.14, 0.10, 0.10), mat.gutterAlu);
       gMesh.position.copy(mid);
       gMesh.rotation.y = Math.atan2(-dz, dx);
-      tagPrintable(gMesh, 'Toiture', '#D0D6DD');
+      tagPrintable(gMesh, 'Toiture', '#565D65');
       roofGroup.add(gMesh);
     }
 
+    // Descentes d'eaux pluviales (détails visuels sur le groupe body, non imprimables)
+    [[-0.07, -0.07], [17.09, -0.07], [25.63, 8.50], [12.83, 9.43], [-0.07, 9.43]].forEach(([dx, dz]) => {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.86, 10), mat.gutterAlu);
+      pipe.position.set(dx, 1.43, dz);
+      pipe.castShadow = true;
+      bodyGroup.add(pipe);
+    });
+
     // =========================================================================
-    // 11. TERRASSE CARRELÉE TRAVERTIN CONTINUE JUSQUE SOUS TOUT LE PATIO D'ENTRÉE
+    // 11. TERRASSE 3,60 m DE LARGE EN DALLES 60×60 cm (CONTINUE SOUS PATIO)
     // =========================================================================
-    // Épouse exactement le pignon gauche SW, toute la façade séjour, puis s'engage
-    // SANS RUPTURE sous tout le patio couvert (Z=7.92..9.36) jusqu'au bord de la porte de garage.
+    // Façade Sud principale : pz = 9,36 -> 12,96 (EXACTEMENT 3,60 m = 6 dalles de 60 cm !)
+    // Pignon Ouest : px = -2,40 -> 0,00 (2,40 m = 4 dalles de 60 cm) + pan coupé angle SW
+    // Continue sous tout le patio couvert (px = 12,90..15,35, pz = 7,92..9,36) jusqu'au bord garage
     const terracePolyXZ = [
-      [-1.55,  0.40], // Retour allée le long du pignon gauche SW
-      [ 0.00,  0.40], // Contre mur pignon gauche SW
+      [-2.40,  0.00], // Retour pignon Ouest (2,40 m = 4 dalles)
+      [ 0.00,  0.00], // Angle NW
       [ 0.00,  9.36], // Angle SW (P7)
-      [12.90,  9.36], // Angle façade séjour / patio (P6)
-      [12.90,  7.92], // Fond patio gauche (P5, porte d'entrée)
-      [15.35,  7.92], // Fond patio droite (P4, sous fenêtres WC + Cellier)
-      [16.58,  9.15], // Limite mur diagonal juste avant la porte de garage
-      [15.95, 10.62], // Bord extérieur patio vers la cour gravier
-      [11.35, 12.60], // Bord avant légèrement biaisé devant la façade séjour
-      [-2.30, 12.95], // Angle avant-gauche terrasse
-      [-2.95, 11.35]  // Pan coupé angle gauche
+      [12.90,  9.36], // Angle façade Sud / patio (P6)
+      [12.90,  7.92], // Fond patio porte d'entrée (P5)
+      [15.35,  7.92], // Fond patio WC/Cellier (P4)
+      [16.55,  9.12], // Limite mur diagonal avant porte garage
+      [15.85, 10.65], // Bord patio donnant sur cour gravier
+      [12.90, 12.96], // Coin avant droit à exactement 3,60 m de la façade (9,36 + 3,60)
+      [ 0.00, 12.96], // Bord avant gauche à exactement 3,60 m de la façade
+      [-2.40, 11.40]  // Pan coupé angle SW
     ];
 
-    const terracePlinth = new THREE.Mesh(createVerticalPolygonSolid(terracePolyXZ, -1.15, -0.09, 0.25), mat.terraceEdge);
+    // Soubassement terrasse descendant dans le terrain en pente
+    const terracePlinth = new THREE.Mesh(
+      createVerticalPolygonSolid(terracePolyXZ, -1.25, -0.09, 1 / 2.40, 0.0, 9.36),
+      mat.terraceEdge
+    );
     tagPrintable(terracePlinth, 'Terrasse', '#BCB5A8');
     terraceGroup.add(terracePlinth);
 
-    const terraceSlab = new THREE.Mesh(createVerticalPolygonSolid(terracePolyXZ, -0.09, -0.02, 0.28), mat.terraceTop);
+    // Plateau dallé : origine UV alignée sur (px = 0, pz = 9.36), scale = 1 / 2.40 (4 dalles de 0.60 m = 2.40 m)
+    const terraceSlab = new THREE.Mesh(
+      createVerticalPolygonSolid(terracePolyXZ, -0.09, -0.02, 1 / 2.40, 0.0, 9.36),
+      mat.terraceTop
+    );
     tagPrintable(terraceSlab, 'Terrasse', '#E8E1D5');
     terraceGroup.add(terraceSlab);
 
+    // Grille 60×60 cm vectorielle superposée (toggleable) découpée exactement sur le polygone de terrasse
+    function buildTerrace60GridLines() {
+      const pts2D = terracePolyXZ.map(([x, z]) => new THREE.Vector2(x, z));
+      const lineCoords = [];
+      const yLine = -0.015;
+      const step = 0.60;
+
+      // Intersection d'une droite horizontale pz = c avec le polygone
+      for (let z = 0.0; z <= 12.961; z = Math.round((z + step) * 1000) / 1000) {
+        // Aligné sur pz = 9.36 (donc 9.36 - 0.60*k et 9.36 + 0.60*k)
+        const zAligned = 9.36 + Math.round((z - 9.36) / step) * step;
+        const xs = [];
+        for (let i = 0; i < pts2D.length; i++) {
+          const a = pts2D[i], b = pts2D[(i + 1) % pts2D.length];
+          if ((a.y <= zAligned && b.y > zAligned) || (b.y <= zAligned && a.y > zAligned)) {
+            const t = (zAligned - a.y) / (b.y - a.y);
+            xs.push(a.x + t * (b.x - a.x));
+          }
+        }
+        xs.sort((u, v) => u - v);
+        for (let k = 0; k + 1 < xs.length; k += 2) {
+          lineCoords.push(xs[k], yLine, zAligned, xs[k + 1], yLine, zAligned);
+        }
+      }
+
+      // Intersection d'une droite verticale px = c avec le polygone
+      for (let x = -2.40; x <= 16.801; x = Math.round((x + step) * 1000) / 1000) {
+        const zs = [];
+        for (let i = 0; i < pts2D.length; i++) {
+          const a = pts2D[i], b = pts2D[(i + 1) % pts2D.length];
+          if ((a.x <= x && b.x > x) || (b.x <= x && a.x > x)) {
+            const t = (x - a.x) / (b.x - a.x);
+            zs.push(a.y + t * (b.y - a.y));
+          }
+        }
+        zs.sort((u, v) => u - v);
+        for (let k = 0; k + 1 < zs.length; k += 2) {
+          lineCoords.push(x, yLine, zs[k], x, yLine, zs[k + 1]);
+        }
+      }
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(lineCoords, 3));
+      const lines = new THREE.LineSegments(
+        geom,
+        new THREE.LineBasicMaterial({ color: 0x8f8574, transparent: true, opacity: 0.45 })
+      );
+      terraceGridGroup.add(lines);
+    }
+    buildTerrace60GridLines();
+
     // =========================================================================
-    // 12. TERRAIN EN PENTE SOLIDE, COUR GRAVIER, ALLÉE DROITE & AVENUE DE V
+    // 12. TERRAIN EN PENTE SOLIDE, COUR GRAVIER & ACCÈS AVENUE DE V
     // =========================================================================
     function getTerrainHeight(x, z) {
-      // Pente naturelle douce descendant du NW (jardin arrière) vers le SE (Avenue de V)
-      let h = 0.22 - 0.018 * x - 0.054 * z;
-      if (z > 14.5) h -= (z - 14.5) * 0.032;
-      if (x > 25.0 && z > 10.0) h -= (x - 25.0) * 0.032;
+      let h = 0.24 - 0.017 * x - 0.052 * z;
+      if (z > 14.5) h -= (z - 14.5) * 0.030;
+      if (x > 25.0 && z > 10.0) h -= (x - 25.0) * 0.030;
 
-      // Plateforme nivelée autour de la maison et de la cour gravier
-      const dxR = Math.max(0, -1.5 - x, x - 17.5);
-      const dzR = Math.max(0, -0.8 - z, z - 10.5);
+      const dxR = Math.max(0, -2.5 - x, x - 17.5);
+      const dzR = Math.max(0, -0.8 - z, z - 11.2);
       const dRect = Math.hypot(dxR, dzR);
 
-      const uW = ((x - 17.05) + z) * Math.SQRT1_2;
-      const vW = (-(x - 17.05) + z) * Math.SQRT1_2;
+      const uW = ((x - 17.05) + z) * SQRT1_2;
+      const vW = (-(x - 17.05) + z) * SQRT1_2;
       const dWing = Math.hypot(Math.max(0, -0.5 - uW, uW - 12.8), Math.max(0, -0.8 - vW, vW - 7.8));
 
       const distH = Math.min(dRect, dWing);
       const blend = Math.exp(-(distH * distH) / 16.0);
-      const padH = -0.22 - Math.max(0, (z - 7.5) * 0.042);
+      const padH = -0.22 - Math.max(0, (z - 8.0) * 0.040);
       h = THREE.MathUtils.lerp(h, padH, blend);
 
-      // Évite que le terrain ne perce la dalle intérieure
       const inRect = (x > -0.2 && x < 17.2 && z > -0.2 && z < 9.5);
       const inWing = (uW > -0.2 && uW < 12.2 && vW > -0.2 && vW < 7.0);
       if (inRect || inWing) h = Math.min(h, -0.37);
@@ -1424,10 +1664,11 @@
       return THREE.MathUtils.clamp(h, -1.95, 0.85);
     }
 
-    const TX_MIN = -8.0, TX_MAX = 32.0;
-    const TZ_MIN = -7.0, TZ_MAX = 25.5;
+    // Socle maquette ~38 m × 30 m
+    const TX_MIN = -6.5, TX_MAX = 31.5;
+    const TZ_MIN = -6.0, TZ_MAX = 24.0;
     const BASE_Y = -2.35;
-    const NX = 64, NZ = 52;
+    const NX = 62, NZ = 50;
 
     function buildSolidTerrain() {
       const grid = [];
@@ -1443,39 +1684,37 @@
 
       const pos = [], norm = [], col = [];
       const cGrass1 = new THREE.Color(0x6e8c51);
-      const cGrass2 = new THREE.Color(0x5f7a44);
-      const cEarth  = new THREE.Color(0x6e5642);
-      const cGravel = new THREE.Color(0x8c8f93); // Gravier gris cour + allée droite garage
-      const cRoad   = new THREE.Color(0x454a52); // Avenue de V
-      const cSkirt  = new THREE.Color(0x6b645c);
+      const cGrass2 = new THREE.Color(0x5e7944);
+      const cEarth  = new THREE.Color(0x6b5340);
+      const cGravel = new THREE.Color(0x8c9096);
+      const cRoad   = new THREE.Color(0x454a52);
+      const cSkirt  = new THREE.Color(0x676058);
 
       function pointSurfaceColor(x, z) {
         // Avenue de V au Sud-Est
-        if ((x * 0.40 + z * 0.92) > 31.8) return cRoad;
+        if ((x * 0.40 + z * 0.92) > 30.8) return cRoad;
 
-        // Cour gravier gris devant la terrasse & porte de garage
-        const inFrontCourtyard = (x > -2.2 && x < 23.8 && z > 9.5 && z < 20.5 && (x * 0.40 + z * 0.92) < 28.5);
-        // Allée gravier gris le long du pignon droit du garage (P3(20.74,13.31) -> P2(25.55,8.50))
-        // Côté extérieur de X+Z = 34.05, largeur ~2.8 m
+        // Cour gravillonnée devant terrasse & porte garage
+        const inFrontCourtyard = (x > -2.6 && x < 23.8 && z > 9.5 && z < 20.5 && (x * 0.40 + z * 0.92) < 28.0);
+        // Allée gravier gris le long du pignon SE garage (autour des unités PAC)
         const sDiag = x + z;
         const dDiag = x - z;
-        const inGarageSideAlley = (sDiag >= 33.8 && sDiag <= 38.2 && dDiag >= 6.8 && dDiag <= 18.2);
+        const inGarageAlley = (sDiag >= 33.8 && sDiag <= 38.0 && dDiag >= 6.8 && dDiag <= 18.2);
 
-        // Accès gravier reliant la cour à l'Avenue de V
-        const ax = 17.5, az = 16.0, bx = 30.2, bz = 22.8;
+        // Accès gravier vers Avenue de V
+        const ax = 17.5, az = 16.0, bx = 29.8, bz = 22.0;
         const abx = bx - ax, abz = bz - az;
         const t = THREE.MathUtils.clamp(((x - ax) * abx + (z - az) * abz) / (abx * abx + abz * abz), 0, 1);
         const dAccess = Math.hypot(x - (ax + abx * t), z - (az + abz * t));
 
-        if (inFrontCourtyard || inGarageSideAlley || dAccess < 2.35) {
-          const grain = (Math.sin(x * 3.1 + z * 2.7) * 0.5 + 0.5) * 0.06;
-          return cGravel.clone().offsetHSL(0, 0, grain - 0.03);
+        if (inFrontCourtyard || inGarageAlley || dAccess < 2.35) {
+          const grain = (Math.sin(x * 3.1 + z * 2.7) * 0.5 + 0.5) * 0.05;
+          return cGravel.clone().offsetHSL(0, 0, grain - 0.025);
         }
 
-        // Terre/jardin naturel à l'arrière et sur les côtés
-        const blend = Math.sin(x * 0.32) * Math.cos(z * 0.34) * 0.5 + 0.5;
-        if (z < -0.5 && x < 18.0 && x > -3.5) {
-          return cGrass2.clone().lerp(cEarth, 0.35 + blend * 0.25);
+        const blend = Math.sin(x * 0.34) * Math.cos(z * 0.36) * 0.5 + 0.5;
+        if (z < -0.5 && x < 17.5 && x > -3.5) {
+          return cGrass2.clone().lerp(cEarth, 0.38 + blend * 0.22);
         }
         return cGrass2.clone().lerp(cGrass1, blend);
       }
@@ -1540,19 +1779,27 @@
     terrainGroup.add(buildSolidTerrain());
 
     // =========================================================================
-    // 13. ENVIRONNEMENT (2 UNITÉS PAC PIGNON GARAGE, ARBRES, CLÔTURES, BOUSSOLE)
+    // 13. ENVIRONNEMENT (2 PAC PIGNON GARAGE, CLÔTURES, ARBRES & BOUSSOLE NORD)
     // =========================================================================
-    // Deux petites unités extérieures de pompe à chaleur contre le pignon droit du garage (P3->P2)
     function addHeatPumpUnit(x, z, w, h, d) {
       const y = getTerrainHeight(x, z);
       const g = new THREE.Group();
-      g.position.set(x, y + h * 0.5 + 0.04, z);
-      g.rotation.y = Math.PI / 4; // Parallèle au pignon garage SE
+      g.position.set(x, y, z);
+      g.rotation.y = Math.PI / 4;
+
+      const pad = new THREE.Mesh(
+        new THREE.BoxGeometry(w + 0.14, 0.08, d + 0.14),
+        new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.9 })
+      );
+      pad.position.y = 0.04;
+      pad.receiveShadow = true;
+      g.add(pad);
 
       const body = new THREE.Mesh(
         new THREE.BoxGeometry(w, h, d),
         new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: 0.55 })
       );
+      body.position.y = 0.08 + h * 0.5;
       body.castShadow = true;
       body.receiveShadow = true;
       g.add(body);
@@ -1562,40 +1809,19 @@
         new THREE.MeshStandardMaterial({ color: 0x2d3238, roughness: 0.7 })
       );
       fan.rotation.x = Math.PI / 2;
-      fan.position.set(-w * 0.14, 0, d * 0.5 + 0.005);
+      fan.position.set(-w * 0.14, 0.08 + h * 0.5, d * 0.5 + 0.005);
       g.add(fan);
 
       envGroup.add(g);
     }
-    // Positionnées près de l'angle droit du pignon SE du garage (entre milieu et P2)
-    addHeatPumpUnit(24.25, 10.35, 0.90, 0.78, 0.38);
-    addHeatPumpUnit(25.00,  9.60, 0.68, 0.56, 0.32);
+    // Deux unités extérieures PAC contre l'angle arrière du pignon SE garage
+    addHeatPumpUnit(24.30, 10.30, 0.90, 0.78, 0.38);
+    addHeatPumpUnit(25.05,  9.55, 0.68, 0.56, 0.32);
 
-    // Arbres & haies périphériques
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4f3a, roughness: 0.9 });
-    const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x4b7740, roughness: 0.85 });
-    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x5c894b, roughness: 0.85 });
-
-    function addTree(x, z, scale = 1.0) {
-      const y = getTerrainHeight(x, z);
-      const g = new THREE.Group();
-      g.position.set(x, y, z);
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * scale, 0.16 * scale, 1.35 * scale, 7), trunkMat);
-      trunk.position.y = 0.65 * scale; trunk.castShadow = true; g.add(trunk);
-      const c1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15 * scale, 1), leafMat1);
-      c1.position.set(0, 2.05 * scale, 0); c1.scale.set(1.05, 0.92, 1.05); c1.castShadow = true; g.add(c1);
-      const c2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.75 * scale, 1), leafMat2);
-      c2.position.set(0.5 * scale, 1.75 * scale, 0.35 * scale); c2.castShadow = true; g.add(c2);
-      envGroup.add(g);
-    }
-    [
-      [-5.6, -4.0, 1.1], [-5.5, 3.2, 0.92], [5.0, -5.0, 1.05],
-      [14.2, -4.8, 1.0], [23.8, -2.8, 1.25], [29.2, 3.6, 1.05], [-5.8, 16.5, 1.05]
-    ].forEach(([x, z, s]) => addTree(x, z, s));
-
-    // Clôtures fines anthracite le long des limites
-    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x3f464e, roughness: 0.6 });
-    function addFenceLine(x1, z1, x2, z2, panels = 8) {
+    // Clôtures rigides anthracite bordant la cour SE et les limites Nord/Ouest
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x353b42, roughness: 0.6 });
+    const meshWireMat = new THREE.MeshStandardMaterial({ color: 0x2f353b, transparent: true, opacity: 0.28, roughness: 0.8 });
+    function addFenceLine(x1, z1, x2, z2, panels = 7) {
       for (let i = 0; i <= panels; i++) {
         const t = i / panels;
         const x = THREE.MathUtils.lerp(x1, x2, t);
@@ -1611,36 +1837,57 @@
           const nz = THREE.MathUtils.lerp(z1, z2, (i + 1) / panels);
           const ny = getTerrainHeight(nx, nz);
           const len = Math.hypot(nx - x, nz - z);
-          const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.04, 0.03), fenceMat);
-          rail.position.set((x + nx) * 0.5, (y + ny) * 0.5 + 0.95, (z + nz) * 0.5);
-          rail.rotation.y = Math.atan2(-(nz - z), nx - x);
-          envGroup.add(rail);
+          const rot = Math.atan2(-(nz - z), nx - x);
+          const panel = new THREE.Mesh(new THREE.BoxGeometry(len, 1.02, 0.025), meshWireMat);
+          panel.position.set((x + nx) * 0.5, (y + ny) * 0.5 + 0.56, (z + nz) * 0.5);
+          panel.rotation.y = rot;
+          envGroup.add(panel);
         }
       }
     }
-    addFenceLine(-7.0, -6.0, 29.0, -6.0, 12);
-    addFenceLine(-7.0, -6.0, -7.0, 20.0, 9);
-    addFenceLine(12.0, 21.0, 24.5, 15.8, 6); // Clôture cour droite comme sur la vue aérienne
+    addFenceLine(-5.8, -5.2, 28.0, -5.2, 11);
+    addFenceLine(-5.8, -5.2, -5.8, 19.0, 8);
+    addFenceLine(11.8, 20.4, 24.4, 15.2, 6);
 
-    // Boussole Nord 3D orientée selon le plan d'origine (pointe à ~25° vers le haut-gauche / axe Nord réel)
+    // Arbres périphériques minimalistes
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4f3a, roughness: 0.9 });
+    const leafMat1 = new THREE.MeshStandardMaterial({ color: 0x4b7740, roughness: 0.85 });
+    const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x5c894b, roughness: 0.85 });
+    function addTree(x, z, scale = 1.0) {
+      const y = getTerrainHeight(x, z);
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.11 * scale, 0.16 * scale, 1.35 * scale, 7), trunkMat);
+      trunk.position.y = 0.65 * scale; trunk.castShadow = true; g.add(trunk);
+      const c1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.12 * scale, 1), leafMat1);
+      c1.position.set(0, 2.02 * scale, 0); c1.scale.set(1.05, 0.92, 1.05); c1.castShadow = true; g.add(c1);
+      const c2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.72 * scale, 1), leafMat2);
+      c2.position.set(0.5 * scale, 1.72 * scale, 0.35 * scale); c2.castShadow = true; g.add(c2);
+      envGroup.add(g);
+    }
+    [[-4.6, -3.5, 1.05], [5.5, -4.2, 0.95], [15.5, -4.0, 1.0], [24.2, -2.5, 1.15], [29.2, 3.5, 1.0]].forEach(
+      ([x, z, s]) => addTree(x, z, s)
+    );
+
+    // Boussole Nord minimale alignée sur la flèche N du plan (~22° antihoraire depuis le haut du plan)
     {
       const compass = new THREE.Group();
-      const cx = -3.8, cz = 20.5;
+      const cx = -3.4, cz = 19.6;
       compass.position.set(cx, getTerrainHeight(cx, cz) + 0.08, cz);
-      compass.rotation.y = 0.44; // ~25°
+      compass.rotation.y = 0.384; // ~22° CCW
 
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(1.15, 1.32, 32),
+        new THREE.RingGeometry(1.10, 1.26, 32),
         new THREE.MeshBasicMaterial({ color: 0x334155, side: THREE.DoubleSide })
       );
       ring.rotation.x = -Math.PI / 2;
       compass.add(ring);
 
       const arrowShape = new THREE.Shape();
-      arrowShape.moveTo(0, 1.15);
-      arrowShape.lineTo(0.36, -0.55);
+      arrowShape.moveTo(0, 1.10);
+      arrowShape.lineTo(0.34, -0.52);
       arrowShape.lineTo(0, -0.22);
-      arrowShape.lineTo(-0.36, -0.55);
+      arrowShape.lineTo(-0.34, -0.52);
       arrowShape.closePath();
       const arrowGeom = new THREE.ShapeGeometry(arrowShape);
       arrowGeom.rotateX(-Math.PI / 2);
@@ -1651,23 +1898,23 @@
     }
 
     // =========================================================================
-    // 14. ÉTIQUETTES DES PIÈCES & REPÈRE "AVENUE DE V"
+    // 14. ÉTIQUETTES DES 14 PIÈCES & REPÈRES ENVIRONNEMENTAUX
     // =========================================================================
     const roomSpecs = [
-      { name: 'Chambre 1',       area: '12,00 m²', pos: new THREE.Vector3(2.05, 1.2, 2.05) },
-      { name: 'Bains',           area: '4,78 m²',  pos: new THREE.Vector3(5.10, 1.2, 1.35) },
-      { name: 'WC',              area: '1,73 m²',  pos: new THREE.Vector3(6.76, 1.2, 1.12) },
-      { name: 'Dégagement',      area: '4,93 m²',  pos: new THREE.Vector3(5.60, 1.2, 3.25) },
-      { name: 'Chambre 2',       area: '12,00 m²', pos: new THREE.Vector3(9.05, 1.2, 2.05) },
-      { name: 'Bureau',          area: '14,11 m²', pos: new THREE.Vector3(12.55, 1.2, 2.25) },
-      { name: 'Pièce de vie',    area: '55,00 m²', pos: new THREE.Vector3(5.35, 1.2, 6.75) },
-      { name: 'Entrée',          area: '9,94 m²',  pos: new THREE.Vector3(11.95, 1.2, 6.60) },
-      { name: 'WC',              area: '1,64 m²',  pos: new THREE.Vector3(13.52, 1.2, 6.80) },
-      { name: 'Cellier',         area: '7,98 m²',  pos: new THREE.Vector3(15.65, 1.2, 6.90) },
-      { name: 'Chambre 3',       area: '15,02 m²', pos: new THREE.Vector3(15.95, 1.2, 2.20) },
-      { name: 'Dressing',        area: '6,79 m²',  pos: new THREE.Vector3(17.75, 1.2, 5.15) },
-      { name: 'Bains parentale', area: '4,58 m²',  pos: new THREE.Vector3(19.25, 1.2, 3.65) },
-      { name: 'Garage',          area: '38,40 m²', pos: new THREE.Vector3(20.80, 1.2, 8.65) }
+      { name: 'Pièces de vie', area: '55,00 m²', pos: new THREE.Vector3(5.20, 1.2, 6.60) },
+      { name: 'Chambre 1',     area: '12,00 m²', pos: new THREE.Vector3(2.15, 1.2, 2.00) },
+      { name: 'Bains',         area: '4,78 m²',  pos: new THREE.Vector3(5.25, 1.2, 1.25) },
+      { name: 'WC',            area: '1,73 m²',  pos: new THREE.Vector3(6.95, 1.2, 1.15) },
+      { name: 'Dgt',           area: '4,93 m²',  pos: new THREE.Vector3(5.85, 1.2, 2.88) },
+      { name: 'Chambre 2',     area: '12,00 m²', pos: new THREE.Vector3(9.15, 1.2, 2.00) },
+      { name: 'Bureau',        area: '14,11 m²', pos: new THREE.Vector3(12.75, 1.2, 2.20) },
+      { name: 'Entrée',        area: '9,94 m²',  pos: new THREE.Vector3(11.75, 1.2, 6.65) },
+      { name: 'WC',            area: '1,64 m²',  pos: new THREE.Vector3(13.12, 1.2, 6.78) },
+      { name: 'Cellier',       area: '7,98 m²',  pos: new THREE.Vector3(15.55, 1.2, 6.80) },
+      { name: 'Chambre 3',     area: '15,02 m²', pos: new THREE.Vector3(15.95, 1.2, 2.05) },
+      { name: 'Dressing',      area: '6,79 m²',  pos: new THREE.Vector3(uvToPlan(4.15, 3.20).x, 1.2, uvToPlan(4.15, 3.20).y) },
+      { name: 'Bains',         area: '4,58 m²',  pos: new THREE.Vector3(uvToPlan(4.15, 1.12).x, 1.2, uvToPlan(4.15, 1.12).y) },
+      { name: 'Garage',        area: '38,40 m²', pos: new THREE.Vector3(uvToPlan(8.75, 3.45).x, 1.2, uvToPlan(8.75, 3.45).y) }
     ];
 
     const roomLabelEls = roomSpecs.map(r => {
@@ -1679,10 +1926,9 @@
       return { el, pos: r.pos };
     });
 
-    // Étiquettes environnementales (Avenue de V & Nord)
     const envLabels = [
-      { text: 'Avenue de V', pos: new THREE.Vector3(26.5, -1.35, 22.8), cls: 'bg-slate-900/80 text-slate-200 border-slate-600/60' },
-      { text: 'N', pos: new THREE.Vector3(-4.4, -0.35, 19.2), cls: 'bg-orange-600/90 text-white border-orange-400/60 font-bold' }
+      { text: 'Avenue de V — Commune de S', pos: new THREE.Vector3(25.2, -1.35, 22.0), cls: 'bg-slate-900/85 text-slate-200 border-slate-600/60' },
+      { text: 'N', pos: new THREE.Vector3(-4.0, -0.35, 18.2), cls: 'bg-orange-600/90 text-white border-orange-400/60 font-bold' }
     ].map(item => {
       const el = document.createElement('div');
       el.className = `room-label px-2 py-0.5 rounded-md text-[10px] border shadow-sm ${item.cls}`;
@@ -1692,25 +1938,25 @@
     });
 
     let showRoomLabels = false;
-    let showEnv = true;
-    const proj = new THREE.Vector3();
+    let showTerrainEnv = true;
+    const projVec = new THREE.Vector3();
 
-    function projectLabel(item, visible) {
+    function projectPlanLabel(item, visible) {
       if (!visible) { item.el.style.display = 'none'; return; }
-      proj.copy(item.pos).project(camera);
-      if (proj.z > 1 || proj.z < -1) { item.el.style.display = 'none'; return; }
+      projVec.copy(item.pos).add(worldRoot.position).project(camera);
+      if (projVec.z > 1 || projVec.z < -1) { item.el.style.display = 'none'; return; }
       item.el.style.display = 'block';
-      item.el.style.left = `${(proj.x * 0.5 + 0.5) * window.innerWidth}px`;
-      item.el.style.top = `${(-proj.y * 0.5 + 0.5) * window.innerHeight}px`;
+      item.el.style.left = `${(projVec.x * 0.5 + 0.5) * window.innerWidth}px`;
+      item.el.style.top = `${(-projVec.y * 0.5 + 0.5) * window.innerHeight}px`;
     }
 
     function updateAllLabels() {
-      roomLabelEls.forEach(item => projectLabel(item, showRoomLabels));
-      envLabels.forEach(item => projectLabel(item, showEnv));
+      roomLabelEls.forEach(item => projectPlanLabel(item, showRoomLabels));
+      envLabels.forEach(item => projectPlanLabel(item, showTerrainEnv));
     }
 
     // =========================================================================
-    // 15. ANIMATIONS TOITURE & CAMÉRAS PRÉRÉGLÉES
+    // 15. ANIMATION TOITURE & CAMÉRAS PRÉRÉGLÉES
     // =========================================================================
     let roofMode = 'show';
     let targetRoofY = 0;
@@ -1730,18 +1976,19 @@
       });
 
       if (mode === 'show') { roofGroup.visible = true; targetRoofY = 0; targetRoofOp = 1.0; }
-      else if (mode === 'lift') { roofGroup.visible = true; targetRoofY = 2.75; targetRoofOp = 1.0; }
+      else if (mode === 'lift') { roofGroup.visible = true; targetRoofY = 3.5; targetRoofOp = 1.0; }
       else if (mode === 'xray') { roofGroup.visible = true; targetRoofY = 0; targetRoofOp = 0.28; }
       else if (mode === 'hide') { targetRoofY = 0; targetRoofOp = 0.0; roofGroup.visible = false; }
     }
 
     let camAnim = null;
+    // Coordonnées caméra dans le repère scène (maison centrée autour de 0, 0, 0)
     const camPresets = {
-      drone:   { pos: new THREE.Vector3(22.5, 16.0, 31.5), target: new THREE.Vector3(12.2, 1.3, 6.4) },
-      patio:   { pos: new THREE.Vector3(11.8, 4.8, 22.8),  target: new THREE.Vector3(13.0, 1.4, 8.2) },
-      garage:  { pos: new THREE.Vector3(33.5, 5.2, 20.5),  target: new THREE.Vector3(21.5, 1.6, 10.2) },
-      top:     { pos: new THREE.Vector3(12.6, 32.0, 7.6),  target: new THREE.Vector3(12.6, 0.2, 6.5) },
-      cutaway: { pos: new THREE.Vector3(15.5, 11.5, 17.5), target: new THREE.Vector3(14.0, 0.8, 6.2) }
+      drone:    { pos: new THREE.Vector3(11.5, 16.0, 26.5), target: new THREE.Vector3(0.0, 1.2, 1.2) },
+      patio:    { pos: new THREE.Vector3(-0.5, 4.8, 17.8),  target: new THREE.Vector3(0.5, 1.2, 3.0) },
+      garage:   { pos: new THREE.Vector3(21.5, 5.2, 14.5),  target: new THREE.Vector3(9.5, 1.5, 4.8) },
+      plan:     { pos: new THREE.Vector3(0.2, 31.5, 2.2),   target: new THREE.Vector3(0.2, 0.1, 1.4) },
+      interior: { pos: new THREE.Vector3(0.8, 13.0, 11.5),  target: new THREE.Vector3(1.2, 0.8, 0.2) }
     };
 
     function goToCamera(key) {
@@ -1754,8 +2001,8 @@
         eTgt: p.target.clone(),
         t: 0
       };
-      if (key === 'top' || key === 'cutaway') {
-        if (roofMode === 'show') setRoofMode('hide');
+      if (key === 'plan' || key === 'interior') {
+        setRoofMode('hide');
         if (!showRoomLabels) {
           showRoomLabels = true;
           document.getElementById('toggle-labels').checked = true;
@@ -1764,23 +2011,23 @@
     }
 
     // =========================================================================
-    // 16. EXPORTEUR IMPRESSION 3D — BINARY STL & 3MF (ZIP/XML JS PUR, Z-UP MM)
+    // 16. EXPORTEUR IMPRESSION 3D — BINARY STL & 3MF (ZIP STORE JS PUR, Z-UP MM)
     // =========================================================================
-    function getGroupsForPart(partMode) {
-      if (partMode === 'complete') return [bodyGroup, roofGroup];
-      if (partMode === 'body')     return [bodyGroup];
-      if (partMode === 'roof')     return [roofGroup];
-      if (partMode === 'terrain')  return [bodyGroup, roofGroup, terraceGroup, terrainGroup];
-      return [bodyGroup, roofGroup];
+    function getExportGroups(partMode, includeTerrain) {
+      if (partMode === 'toit') return [roofGroup];
+      const groups = [bodyGroup];
+      if (partMode === 'complet') groups.push(roofGroup);
+      if (includeTerrain) groups.push(terraceGroup, terrainGroup);
+      return groups;
     }
 
-    function collectPrintableMeshes(partMode, scaleDenom) {
-      const scale = 1000 / scaleDenom; // mètres -> mm à l'échelle 1/scaleDenom
-      const groups = getGroupsForPart(partMode);
+    function collectPrintableMeshes(partMode, scaleDenom, includeTerrain) {
+      const scale = 1000 / scaleDenom; // 1 m -> mm à l'échelle 1/scaleDenom
+      const groups = getExportGroups(partMode, includeTerrain);
 
       const savedRoofY = roofGroup.position.y;
-      if (partMode !== 'roof') roofGroup.position.y = 0;
-      root.updateMatrixWorld(true);
+      if (partMode !== 'toit') roofGroup.position.y = 0;
+      worldRoot.updateMatrixWorld(true);
 
       const partsMap = new Map();
       let minX = Infinity, maxX = -Infinity;
@@ -1791,7 +2038,7 @@
       const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
       const sA = new THREE.Vector3(), sB = new THREE.Vector3(), sC = new THREE.Vector3();
 
-      // Three.js (Y-up m) -> Slicer (Z-up mm) en préservant l'orientation droite (det = +1)
+      // Three.js (Y-up m) -> Slicer (Z-up mm) en préservant le sens direct (det = +1)
       const mapVec = (v, out) => {
         out.set(v.x * scale, -v.z * scale, v.y * scale);
         if (out.x < minX) minX = out.x;
@@ -1840,7 +2087,7 @@
       }
 
       roofGroup.position.y = savedRoofY;
-      root.updateMatrixWorld(true);
+      worldRoot.updateMatrixWorld(true);
 
       const cx = (minX + maxX) * 0.5;
       const cy = (minY + maxY) * 0.5;
@@ -1849,9 +2096,9 @@
       for (const p of partsMap.values()) {
         const c = p.coords;
         for (let i = 0; i < c.length; i += 3) {
-          c[i] -= cx;
+          c[i]     -= cx;
           c[i + 1] -= cy;
-          c[i + 2] -= z0; // Base posée exactement à Z = 0.00 mm
+          c[i + 2] -= z0; // Base posée exactement à Z = 0,000 mm
         }
       }
 
@@ -1867,7 +2114,7 @@
     function buildBinarySTL(data) {
       const buffer = new ArrayBuffer(84 + data.totalTriangles * 50);
       const view = new DataView(buffer);
-      const header = 'Maquette 3D Commune de S - Export STL binaire (mm, Z-up)';
+      const header = 'Maison S - Commune de S - Export STL binaire (mm, Z-up)';
       for (let i = 0; i < header.length && i < 80; i++) view.setUint8(i, header.charCodeAt(i));
       view.setUint32(80, data.totalTriangles, true);
 
@@ -1878,16 +2125,16 @@
       for (const part of data.parts) {
         const c = part.coords;
         for (let i = 0; i < c.length; i += 9) {
-          p1.set(c[i], c[i + 1], c[i + 2]);
+          p1.set(c[i],     c[i + 1], c[i + 2]);
           p2.set(c[i + 3], c[i + 4], c[i + 5]);
           p3.set(c[i + 6], c[i + 7], c[i + 8]);
           e1.subVectors(p2, p1);
           e2.subVectors(p3, p1);
           n.crossVectors(e1, e2).normalize();
 
-          view.setFloat32(off, n.x, true); off += 4;
-          view.setFloat32(off, n.y, true); off += 4;
-          view.setFloat32(off, n.z, true); off += 4;
+          view.setFloat32(off, n.x, true);  off += 4;
+          view.setFloat32(off, n.y, true);  off += 4;
+          view.setFloat32(off, n.z, true);  off += 4;
           view.setFloat32(off, p1.x, true); off += 4;
           view.setFloat32(off, p1.y, true); off += 4;
           view.setFloat32(off, p1.z, true); off += 4;
@@ -1897,13 +2144,13 @@
           view.setFloat32(off, p3.x, true); off += 4;
           view.setFloat32(off, p3.y, true); off += 4;
           view.setFloat32(off, p3.z, true); off += 4;
-          view.setUint16(off, 0, true); off += 2;
+          view.setUint16(off, 0, true);     off += 2;
         }
       }
       return new Blob([buffer], { type: 'application/octet-stream' });
     }
 
-    // Archiveur ZIP STORE + CRC-32 pur JS (sans aucune dépendance externe)
+    // Générateur ZIP STORE (non compressé) + CRC-32 pur JS pour export .3MF autonome
     const crcTable = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {
       let c = i;
@@ -2010,7 +2257,7 @@
 
         const c = part.coords;
         for (let i = 0; i < c.length; i += 9) {
-          const v1 = getV(c[i], c[i + 1], c[i + 2]);
+          const v1 = getV(c[i],     c[i + 1], c[i + 2]);
           const v2 = getV(c[i + 3], c[i + 4], c[i + 5]);
           const v3 = getV(c[i + 6], c[i + 7], c[i + 8]);
           if (v1 !== v2 && v2 !== v3 && v3 !== v1) {
@@ -2033,7 +2280,7 @@ ${tLines.join('\n')}
 
       const modelXML = `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xml:lang="fr-FR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
-  <metadata name="Title">Maison — Commune de S</metadata>
+  <metadata name="Title">Maison S - Commune de S</metadata>
   <metadata name="Application">Maquette 3D Web</metadata>
   <resources>
     <basematerials id="1">
@@ -2077,87 +2324,106 @@ ${itemsXML.join('\n')}
       }, 4500);
     }
 
-    function refreshPrintDims() {
-      const partMode = document.getElementById('print-part').value;
-      const scaleDenom = parseInt(document.getElementById('print-scale').value, 10);
-      const data = collectPrintableMeshes(partMode, scaleDenom);
+    const partSelect = document.getElementById('print-part');
+    const scaleSelect = document.getElementById('print-scale');
+    const terrainExportCheck = document.getElementById('export-include-terrain');
+
+    function refreshPrintReadout() {
+      const partMode = partSelect.value;
+      const scaleDenom = parseInt(scaleSelect.value, 10);
+      if (partMode === 'toit') {
+        terrainExportCheck.checked = false;
+        terrainExportCheck.disabled = true;
+      } else {
+        terrainExportCheck.disabled = false;
+      }
+      const incTerrain = terrainExportCheck.checked && partMode !== 'toit';
+      const data = collectPrintableMeshes(partMode, scaleDenom, incTerrain);
+
       document.getElementById('print-dims').textContent =
         `${data.sizeX.toFixed(1)} × ${data.sizeY.toFixed(1)} × ${data.sizeZ.toFixed(1)} mm`;
+
+      const warnEl = document.getElementById('bed-warning');
+      if (data.sizeX > 250 || data.sizeY > 250) warnEl.classList.remove('hidden');
+      else warnEl.classList.add('hidden');
     }
 
     // =========================================================================
-    // 17. ÉVÉNEMENTS INTERFACE & BOUCLE DE RENDU
+    // 17. CONNEXION DES CONTRÔLES UI & BOUCLE DE RENDU
     // =========================================================================
     document.querySelectorAll('.roof-btn').forEach(b => b.addEventListener('click', () => setRoofMode(b.dataset.roof)));
     document.querySelectorAll('.cam-btn').forEach(b => b.addEventListener('click', () => goToCamera(b.dataset.cam)));
 
-    document.getElementById('toggle-furniture').addEventListener('change', e => {
-      furnitureGroup.visible = e.target.checked;
-    });
     document.getElementById('toggle-labels').addEventListener('change', e => {
       showRoomLabels = e.target.checked;
       updateAllLabels();
     });
-    document.getElementById('toggle-env').addEventListener('change', e => {
-      showEnv = e.target.checked;
-      terrainGroup.visible = showEnv;
-      terraceGroup.visible = showEnv;
-      envGroup.visible = showEnv;
+    document.getElementById('toggle-furniture').addEventListener('change', e => {
+      furnitureGroup.visible = e.target.checked;
+    });
+    document.getElementById('toggle-terrain').addEventListener('change', e => {
+      showTerrainEnv = e.target.checked;
+      terrainGroup.visible = showTerrainEnv;
+      envGroup.visible = showTerrainEnv;
       updateAllLabels();
     });
+    document.getElementById('toggle-evening').addEventListener('change', e => {
+      setEveningMode(e.target.checked);
+    });
+    document.getElementById('toggle-tilegrid').addEventListener('change', e => {
+      terraceGridGroup.visible = e.target.checked;
+    });
 
-    document.getElementById('btn-light-day').addEventListener('click', () => setLightingMode('day'));
-    document.getElementById('btn-light-evening').addEventListener('click', () => setLightingMode('evening'));
-
-    document.getElementById('print-part').addEventListener('change', refreshPrintDims);
-    document.getElementById('print-scale').addEventListener('change', refreshPrintDims);
-
-    const fileSuffix = {
-      complete: 'complete',
-      body: 'corps-sans-toit',
-      roof: 'toit-amovible',
-      terrain: 'avec-terrain'
-    };
+    partSelect.addEventListener('change', refreshPrintReadout);
+    scaleSelect.addEventListener('change', refreshPrintReadout);
+    terrainExportCheck.addEventListener('change', refreshPrintReadout);
 
     document.getElementById('btn-export-stl').addEventListener('click', () => {
       try {
-        const partMode = document.getElementById('print-part').value;
-        const scaleDenom = parseInt(document.getElementById('print-scale').value, 10);
-        const data = collectPrintableMeshes(partMode, scaleDenom);
+        const partMode = partSelect.value;
+        const scaleDenom = parseInt(scaleSelect.value, 10);
+        const incTerrain = terrainExportCheck.checked && partMode !== 'toit';
+        const data = collectPrintableMeshes(partMode, scaleDenom, incTerrain);
         const blob = buildBinarySTL(data);
-        downloadBlob(blob, `maison-S-${fileSuffix[partMode]}-1-${scaleDenom}.stl`);
+        const partTag = incTerrain ? `${partMode}-terrain` : partMode;
+        const filename = `maison-S-${partTag}-1-${scaleDenom}.stl`;
+        downloadBlob(blob, filename);
         showToast(
-          `STL prêt (${data.totalTriangles.toLocaleString('fr-FR')} triangles • ` +
+          `${filename} téléchargé (${data.totalTriangles.toLocaleString('fr-FR')} triangles • ` +
           `${data.sizeX.toFixed(0)}×${data.sizeY.toFixed(0)}×${data.sizeZ.toFixed(0)} mm)`
         );
       } catch (err) {
         console.error(err);
-        showToast('Erreur lors de la génération STL.');
+        showToast('Erreur lors de la génération du fichier STL.');
       }
     });
 
     document.getElementById('btn-export-3mf').addEventListener('click', () => {
       try {
-        const partMode = document.getElementById('print-part').value;
-        const scaleDenom = parseInt(document.getElementById('print-scale').value, 10);
-        const data = collectPrintableMeshes(partMode, scaleDenom);
+        const partMode = partSelect.value;
+        const scaleDenom = parseInt(scaleSelect.value, 10);
+        const incTerrain = terrainExportCheck.checked && partMode !== 'toit';
+        const data = collectPrintableMeshes(partMode, scaleDenom, incTerrain);
         const blob = build3MF(data);
-        downloadBlob(blob, `maison-S-${fileSuffix[partMode]}-1-${scaleDenom}.3mf`);
+        const partTag = incTerrain ? `${partMode}-terrain` : partMode;
+        const filename = `maison-S-${partTag}-1-${scaleDenom}.3mf`;
+        downloadBlob(blob, filename);
         showToast(
-          `3MF prêt (${data.parts.length} pièces, ${data.totalTriangles.toLocaleString('fr-FR')} triangles • ` +
+          `${filename} téléchargé (${data.parts.length} pièces • ` +
           `${data.sizeX.toFixed(0)}×${data.sizeY.toFixed(0)}×${data.sizeZ.toFixed(0)} mm)`
         );
       } catch (err) {
         console.error(err);
-        showToast('Erreur lors de la génération 3MF.');
+        showToast('Erreur lors de la génération du fichier 3MF.');
       }
     });
 
+    // Repli / affichage du panneau gauche
     const sidebar = document.getElementById('sidebar');
     let sidebarOpen = window.innerWidth >= 640;
     const syncSidebar = () => {
-      if (sidebarOpen) sidebar.classList.remove('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
-      else sidebar.classList.add('translate-x-[120%]', 'opacity-0', 'pointer-events-none');
+      if (sidebarOpen) sidebar.classList.remove('-translate-x-[120%]', 'opacity-0', 'pointer-events-none');
+      else sidebar.classList.add('-translate-x-[120%]', 'opacity-0', 'pointer-events-none');
     };
     syncSidebar();
     document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
@@ -2175,6 +2441,7 @@ ${itemsXML.join('\n')}
     function animate() {
       requestAnimationFrame(animate);
 
+      // Interpolation douce de la hauteur et de la transparence de toiture
       roofGroup.position.y += (targetRoofY - roofGroup.position.y) * 0.12;
       for (const m of roofMats) {
         const nextOp = m.opacity + (targetRoofOp - m.opacity) * 0.14;
@@ -2186,6 +2453,7 @@ ${itemsXML.join('\n')}
         }
       }
 
+      // Animation fluide des vues caméra
       if (camAnim) {
         camAnim.t = Math.min(1, camAnim.t + 0.045);
         const ease = 1 - Math.pow(1 - camAnim.t, 3);
@@ -2200,7 +2468,7 @@ ${itemsXML.join('\n')}
     }
 
     window.onload = () => {
-      refreshPrintDims();
+      refreshPrintReadout();
       animate();
     };
   </script>
