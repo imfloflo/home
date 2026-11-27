@@ -5668,66 +5668,299 @@
         });
 
         // Buffet moderne chêne clair & façades taupe-gris brillant contre la cloison Chambre 2 (Z = 3,95)
-        const bX = 9.48, bZ = 4.22;
-        addLivMesh(new THREE.BoxGeometry(1.96, 0.040, 0.45), oakMat, bX, 0.81, bZ);          // Plateau chêne
-        addLivMesh(new THREE.BoxGeometry(0.036, 0.80, 0.44), oakMat, bX - 0.96, 0.408, bZ); // Joue gauche chêne
-        addLivMesh(new THREE.BoxGeometry(0.036, 0.80, 0.44), oakMat, bX + 0.96, 0.408, bZ); // Joue droite chêne
-        addLivMesh(new THREE.BoxGeometry(1.89, 0.72, 0.41), taupeGlossMat, bX, 0.43, bZ - 0.01);
-        addLivMesh(new THREE.BoxGeometry(1.88, 0.075, 0.38), oakMat, bX, 0.045, bZ - 0.01);
-        // 3 façades de portes taupe brillant séparées par de fins joints sombres
-        [-0.62, 0.0, 0.62].forEach(dx => {
-          addLivMesh(new THREE.BoxGeometry(0.60, 0.68, 0.020), taupeGlossMat, bX + dx, 0.43, bZ + 0.212);
+        const bX = 9.54, bZ = 4.21, bW = 2.18;
+        addLivMesh(new THREE.BoxGeometry(bW, 0.040, 0.45), oakMat, bX, 0.81, bZ);                // Plateau chêne
+        addLivMesh(new THREE.BoxGeometry(0.036, 0.80, 0.44), oakMat, bX - bW * 0.5 + 0.018, 0.408, bZ); // Joue gauche chêne
+        addLivMesh(new THREE.BoxGeometry(0.036, 0.80, 0.44), oakMat, bX + bW * 0.5 - 0.018, 0.408, bZ); // Joue droite chêne
+        addLivMesh(new THREE.BoxGeometry(bW - 0.07, 0.72, 0.41), taupeGlossMat, bX, 0.43, bZ - 0.01);
+        addLivMesh(new THREE.BoxGeometry(bW - 0.08, 0.075, 0.38), oakMat, bX, 0.045, bZ - 0.01);
+        // 3 colonnes de façades taupe brillant à 3 bandeaux horizontaux séparés par de fins joints sombres
+        const colW = (bW - 0.12) / 3;
+        [-colW - 0.012, 0.0, colW + 0.012].forEach(dx => {
+          [0.21, 0.435, 0.66].forEach(dy => {
+            addLivMesh(new THREE.BoxGeometry(colW - 0.008, 0.212, 0.020), taupeGlossMat, bX + dx, dy, bZ + 0.212);
+          });
         });
 
-        // Objets déco posés sur le buffet (Y = 0,83) : plateau doré + diffuseur + vase rotin lavande + bougies
-        // Plateau rond/ovale doré métallisé côté droit (+X)
-        const trayX = 10.02, trayZ = 4.28;
-        addLivMesh(new THREE.CylinderGeometry(0.18, 0.17, 0.010, 22), brassGoldMat, trayX, 0.835, trayZ);
-        addLivMesh(new THREE.TorusGeometry(0.178, 0.012, 8, 24), brassGoldMat, trayX, 0.848, trayZ, Math.PI / 2, 0, 0);
-        // Bougie ambrée, pot vert/or et flacon diffuseur bâtonnets sur le plateau
-        addLivMesh(new THREE.CylinderGeometry(0.034, 0.034, 0.075, 12), new THREE.MeshStandardMaterial({ color: 0x9b7438, roughness: 0.25 }), trayX - 0.04, 0.878, trayZ + 0.04);
-        addLivMesh(new THREE.CylinderGeometry(0.030, 0.030, 0.055, 12), new THREE.MeshStandardMaterial({ color: 0x5c736b, roughness: 0.35 }), trayX + 0.06, 0.868, trayZ + 0.06);
-        addLivMesh(new THREE.CylinderGeometry(0.028, 0.030, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0x261d19, roughness: 0.22 }), trayX + 0.10, 0.905, trayZ - 0.04);
-        for (let r = 0; r < 6; r++) {
-          const a = (r / 6) * Math.PI * 2;
-          addLivMesh(new THREE.CylinderGeometry(0.0025, 0.0025, 0.22, 5), honeyWoodMat, trayX + 0.10 + Math.cos(a) * 0.015, 1.04, trayZ - 0.04 + Math.sin(a) * 0.015, Math.sin(a) * 0.22, 0, -Math.cos(a) * 0.22);
-        }
-        // Petite bouteille décorative verre & ruban rose
-        addLivMesh(new THREE.CylinderGeometry(0.032, 0.036, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0xd96b78, roughness: 0.35 }), trayX - 0.04, 0.905, trayZ - 0.06);
+        // Objets déco posés sur le buffet devant le miroir (de gauche -X vers droite +X comme sur la photo)
+        // 1. Côté gauche (-X) : bougie blanche, diffuseur rond blanc, vases rotin/céramique & lavande séchée
+        addLivMesh(new THREE.CylinderGeometry(0.038, 0.036, 0.085, 14), whiteMatteMat, 8.58, 0.873, 4.24);
+        addLivMesh(new THREE.SphereGeometry(0.048, 14, 12), whiteMatteMat, 8.70, 0.878, 4.22);
 
-        // Grand vase verre entouré de rotin tressé + bouquet de lavande séchée (X = 9,56, Z = 4,18)
-        const vX = 9.56, vZ = 4.18;
-        addLivMesh(new THREE.CylinderGeometry(0.068, 0.062, 0.14, 14), basketMat, vX, 0.90, vZ);
-        addLivMesh(new THREE.CylinderGeometry(0.055, 0.064, 0.18, 14), glassClearMat, vX, 1.04, vZ);
+        const vX = 8.94, vZ = 4.20;
+        addLivMesh(new THREE.CylinderGeometry(0.062, 0.058, 0.13, 14), basketMat, vX, 0.895, vZ);
+        addLivMesh(new THREE.CylinderGeometry(0.050, 0.058, 0.16, 14), glassClearMat, vX, 1.02, vZ);
         const lavMat1 = new THREE.MeshStandardMaterial({ color: 0x6b5c6e, roughness: 0.94 });
         const lavMat2 = new THREE.MeshStandardMaterial({ color: 0x7d6d7e, roughness: 0.94 });
-        for (let lv = 0; lv < 16; lv++) {
-          const a = (lv / 16) * Math.PI * 2;
-          const rad = 0.03 + (lv % 3) * 0.038;
-          const lh = 0.20 + (lv % 4) * 0.035;
-          addLivMesh(new THREE.ConeGeometry(0.022, lh, 6), lv % 2 === 0 ? lavMat1 : lavMat2, vX + Math.cos(a) * rad, 1.24 + (lv % 2) * 0.04, vZ + Math.sin(a) * rad, Math.sin(a) * 0.26, 0, -Math.cos(a) * 0.26);
+        for (let lv = 0; lv < 14; lv++) {
+          const a = (lv / 14) * Math.PI * 2;
+          const rad = 0.028 + (lv % 3) * 0.032;
+          const lh = 0.19 + (lv % 4) * 0.032;
+          addLivMesh(
+            new THREE.ConeGeometry(0.020, lh, 6),
+            lv % 2 === 0 ? lavMat1 : lavMat2,
+            vX + Math.cos(a) * rad, 1.21 + (lv % 2) * 0.035, vZ + Math.sin(a) * rad,
+            Math.sin(a) * 0.24, 0, -Math.cos(a) * 0.24
+          );
         }
-        // Deux roses crème séchées à l'arrière du vase
-        [-0.04, 0.05].forEach((dx, idx) => {
-          addLivMesh(new THREE.SphereGeometry(0.034, 9, 8), cushionCreamMat, vX + 0.12 + dx, 1.38 + idx * 0.04, vZ - 0.04);
-        });
+        // Petits vases céramique vert olive / beige à gauche de la lavande
+        const oliveCeramicMat = new THREE.MeshStandardMaterial({ color: 0x6f7a5a, roughness: 0.45 });
+        const driedPalmMat    = new THREE.MeshStandardMaterial({ color: 0xd9bf94, roughness: 0.88, side: THREE.DoubleSide });
+        addLivMesh(new THREE.CylinderGeometry(0.032, 0.040, 0.15, 12), oliveCeramicMat, 8.81, 0.905, 4.14);
+        addLivMesh(new THREE.ConeGeometry(0.065, 0.24, 5), driedPalmMat, 8.81, 1.12, 4.13, 0, 0.3, 0.12);
 
-        // Petit diffuseur sphérique blanc & bougie blanche côté gauche du buffet
-        addLivMesh(new THREE.SphereGeometry(0.052, 14, 12), whiteMatteMat, 9.16, 0.88, 4.25);
-        addLivMesh(new THREE.CylinderGeometry(0.042, 0.040, 0.095, 14), whiteMatteMat, 8.78, 0.878, 4.22);
+        // 2. Milieu-gauche : plateau doré avec bougies, diffuseur à bâtonnets & bouteille ruban rose
+        const trayX = 9.24, trayZ = 4.24;
+        addLivMesh(new THREE.CylinderGeometry(0.16, 0.15, 0.010, 22), brassGoldMat, trayX, 0.835, trayZ);
+        addLivMesh(new THREE.TorusGeometry(0.158, 0.011, 8, 24), brassGoldMat, trayX, 0.847, trayZ, Math.PI / 2, 0, 0);
+        addLivMesh(new THREE.CylinderGeometry(0.030, 0.030, 0.070, 12), new THREE.MeshStandardMaterial({ color: 0x9b7438, roughness: 0.25 }), trayX - 0.03, 0.875, trayZ + 0.03);
+        addLivMesh(new THREE.CylinderGeometry(0.026, 0.026, 0.052, 12), new THREE.MeshStandardMaterial({ color: 0x5c736b, roughness: 0.35 }), trayX + 0.05, 0.866, trayZ + 0.05);
+        addLivMesh(new THREE.CylinderGeometry(0.025, 0.028, 0.13, 12), new THREE.MeshStandardMaterial({ color: 0x261d19, roughness: 0.22 }), trayX + 0.08, 0.900, trayZ - 0.03);
+        for (let r = 0; r < 5; r++) {
+          const a = (r / 5) * Math.PI * 2;
+          addLivMesh(new THREE.CylinderGeometry(0.0024, 0.0024, 0.21, 5), honeyWoodMat, trayX + 0.08 + Math.cos(a) * 0.014, 1.03, trayZ - 0.03 + Math.sin(a) * 0.014, Math.sin(a) * 0.20, 0, -Math.cos(a) * 0.20);
+        }
+        addLivMesh(new THREE.CylinderGeometry(0.028, 0.032, 0.13, 12), new THREE.MeshStandardMaterial({ color: 0xd96b78, roughness: 0.35 }), trayX - 0.03, 0.900, trayZ - 0.05);
 
-        // Grand miroir rectangulaire à cadre noir mat suspendu au-dessus du buffet (Z = 3,99)
-        const mir = new THREE.Group();
-        mir.position.set(bX, 1.66, 3.99);
-        livGroup.add(mir);
-        const mW = 1.56, mH = 1.24, bar = 0.042;
-        addLivMesh(new THREE.BoxGeometry(mW, bar, 0.030), blackMatteMat, 0,  mH * 0.5 - bar * 0.5, 0, 0, 0, 0, mir);
-        addLivMesh(new THREE.BoxGeometry(mW, bar, 0.030), blackMatteMat, 0, -mH * 0.5 + bar * 0.5, 0, 0, 0, 0, mir);
-        addLivMesh(new THREE.BoxGeometry(bar, mH, 0.030), blackMatteMat, -mW * 0.5 + bar * 0.5, 0, 0, 0, 0, 0, mir);
-        addLivMesh(new THREE.BoxGeometry(bar, mH, 0.030), blackMatteMat,  mW * 0.5 - bar * 0.5, 0, 0, 0, 0, 0, mir);
-        const mirrorGlass = new THREE.Mesh(new THREE.PlaneGeometry(mW - bar * 1.8, mH - bar * 1.8), mirrorPaneMat);
-        mirrorGlass.position.z = 0.010;
-        mir.add(mirrorGlass);
+        // 3. Centre : cadre photo noir & blanc posé contre le miroir + couronne ronde en bois & fleurs séchées
+        {
+          const bwCanvas = document.createElement('canvas');
+          bwCanvas.width = 128; bwCanvas.height = 160;
+          const bwCtx = bwCanvas.getContext('2d');
+          bwCtx.fillStyle = '#e7e8ea';
+          bwCtx.fillRect(0, 0, 128, 160);
+          bwCtx.fillStyle = '#242629';
+          bwCtx.beginPath(); bwCtx.arc(46, 56, 18, 0, Math.PI * 2); bwCtx.fill();
+          bwCtx.beginPath(); bwCtx.arc(82, 54, 17, 0, Math.PI * 2); bwCtx.fill();
+          bwCtx.fillRect(24, 76, 38, 76);
+          bwCtx.fillStyle = '#4a4e54';
+          bwCtx.fillRect(64, 74, 40, 78);
+          const bwTex = new THREE.CanvasTexture(bwCanvas);
+          bwTex.colorSpace = THREE.SRGBColorSpace;
+
+          const pFrame = new THREE.Group();
+          pFrame.position.set(9.48, 0.97, 4.10);
+          pFrame.rotation.set(-0.14, -0.18, 0);
+          livGroup.add(pFrame);
+          addLivMesh(new THREE.BoxGeometry(0.21, 0.27, 0.016), whiteMatteMat, 0, 0, 0, 0, 0, 0, pFrame);
+          const pFace = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.185, 0.245),
+            new THREE.MeshStandardMaterial({ map: bwTex, roughness: 0.55 })
+          );
+          pFace.position.z = 0.009;
+          pFrame.add(pFace);
+
+          // Couronne ronde bois naturel / fleurs séchées posée à droite du cadre
+          const hoop = new THREE.Group();
+          hoop.position.set(9.84, 0.945, 4.09);
+          hoop.rotation.set(-0.12, 0.12, 0);
+          livGroup.add(hoop);
+          addLivMesh(new THREE.TorusGeometry(0.115, 0.011, 8, 24), honeyWoodMat, 0, 0, 0, 0, 0, 0, hoop);
+          addLivMesh(new THREE.BoxGeometry(0.18, 0.036, 0.012), honeyWoodMat, 0, -0.045, 0.004, 0, 0, 0, hoop);
+          for (let k = 0; k < 7; k++) {
+            const a = -0.35 + (k / 6) * (Math.PI + 0.7);
+            addLivMesh(
+              new THREE.DodecahedronGeometry(0.026 + (k % 2) * 0.008, 0),
+              k % 2 === 0 ? driedPalmMat : cushionCreamMat,
+              Math.cos(a) * 0.088, Math.sin(a) * 0.088 + 0.01, 0.012,
+              0, 0, 0, hoop
+            );
+          }
+        }
+
+        // 4. Côté droit (+X) : petit cadre famille, vases céramique vert & doré aux grandes feuilles de palmes séchées + écran connecté Nest Hub
+        {
+          addLivMesh(new THREE.BoxGeometry(0.15, 0.19, 0.015), blackMatteMat, 10.08, 0.925, 4.07, -0.14, 0.06, 0);
+          // Vases doré & vert sauge + grandes feuilles de palmes éventail séchées
+          addLivMesh(new THREE.CylinderGeometry(0.030, 0.038, 0.16, 12), brassGoldMat, 10.22, 0.91, 4.15);
+          addLivMesh(new THREE.CylinderGeometry(0.034, 0.044, 0.20, 12), oliveCeramicMat, 10.30, 0.93, 4.13);
+          [
+            { x: 10.26, y: 1.18, z: 4.12, r: 0.115, rz:  0.22, ry:  0.15 },
+            { x: 10.34, y: 1.24, z: 4.10, r: 0.125, rz: -0.10, ry: -0.18 },
+            { x: 10.42, y: 1.16, z: 4.14, r: 0.110, rz: -0.34, ry: -0.35 }
+          ].forEach(pf => {
+            const fan = new THREE.Mesh(new THREE.CircleGeometry(pf.r, 10, 0, Math.PI * 1.15), driedPalmMat);
+            fan.position.set(pf.x, pf.y, pf.z);
+            fan.rotation.set(-0.08, pf.ry, pf.rz - Math.PI * 0.08);
+            fan.castShadow = true;
+            livGroup.add(fan);
+          });
+
+          // Écran connecté type Google Nest Hub (bordure blanche, pied tissu sombre, affichage photo + heure 16:04)
+          const hubCanvas = document.createElement('canvas');
+          hubCanvas.width = 256; hubCanvas.height = 160;
+          const hCtx = hubCanvas.getContext('2d');
+          const hg = hCtx.createLinearGradient(0, 0, 0, 160);
+          hg.addColorStop(0, '#5a94c8');
+          hg.addColorStop(0.55, '#8ea69a');
+          hg.addColorStop(1, '#585042');
+          hCtx.fillStyle = hg;
+          hCtx.fillRect(0, 0, 256, 160);
+          hCtx.fillStyle = 'rgba(0,0,0,0.28)';
+          hCtx.fillRect(0, 118, 256, 42);
+          hCtx.fillStyle = '#ffffff';
+          hCtx.font = '600 28px Inter, Arial, sans-serif';
+          hCtx.fillText('16:04', 14, 148);
+          const hubTex = new THREE.CanvasTexture(hubCanvas);
+          hubTex.colorSpace = THREE.SRGBColorSpace;
+          const hubScreenMat = new THREE.MeshStandardMaterial({
+            map: hubTex,
+            emissiveMap: hubTex,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.45,
+            roughness: 0.16
+          });
+          carNightGlowMats.push({ mat: hubScreenMat, day: 0.45, night: 0.95 });
+
+          const hub = new THREE.Group();
+          hub.position.set(10.48, 0.83, 4.24);
+          hub.rotation.y = -0.36; // Orienté vers l'entrée et la cuisine
+          livGroup.add(hub);
+          addLivMesh(new THREE.BoxGeometry(0.18, 0.045, 0.09), blackMatteMat, 0, 0.024, -0.02, 0, 0, 0, hub);
+          addLivMesh(new THREE.BoxGeometry(0.24, 0.155, 0.016), whiteMatteMat, 0, 0.105, 0.01, -0.22, 0, 0, hub);
+          const hubFace = new THREE.Mesh(new THREE.PlaneGeometry(0.215, 0.132), hubScreenMat);
+          hubFace.position.set(0, 0.105, 0.019);
+          hubFace.rotation.x = -0.22;
+          hub.add(hubFace);
+        }
+
+        // Grand miroir verrière atelier industriel en métal noir à 5 panneaux verticaux & goussets rivetés (Z = 4,00)
+        // Posé juste au-dessus du plateau chêne du buffet (y = 0,835..1,985) comme sur la photo
+        {
+          function createVerriereMirrorReflectionTexture() {
+            const w = 512, h = 256;
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            const ctx = c.getContext('2d');
+
+            // Reflet doux réaliste de la pièce de vie lumineuse & des baies vitrées sur le jardin en face
+            const bg = ctx.createLinearGradient(0, 0, 0, h);
+            bg.addColorStop(0.00, '#dde4ea');
+            bg.addColorStop(0.45, '#cfd8e0');
+            bg.addColorStop(0.72, '#c8c3b9');
+            bg.addColorStop(1.00, '#b3aca0');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // Reflet léger des deux baies / fenêtres ouvrant sur la verdure en face
+            const drawWindowReflect = (rx, ry, rw, rh) => {
+              ctx.fillStyle = 'rgba(42, 48, 54, 0.42)';
+              ctx.fillRect(rx - 4, ry - 4, rw + 8, rh + 8);
+              const wg = ctx.createLinearGradient(0, ry, 0, ry + rh);
+              wg.addColorStop(0.0, 'rgba(176, 210, 232, 0.52)');
+              wg.addColorStop(0.42, 'rgba(116, 152, 92, 0.48)');
+              wg.addColorStop(1.0, 'rgba(84, 114, 68, 0.44)');
+              ctx.fillStyle = wg;
+              ctx.fillRect(rx, ry, rw, rh);
+            };
+            drawWindowReflect(92, 74, 156, 112);  // Reflet baie Sud
+            drawWindowReflect(366, 66, 112, 66);  // Reflet fenêtre cuisine
+
+            // Reflet subtil du plan de travail chêne & meubles blancs de la cuisine en bas du miroir
+            ctx.fillStyle = 'rgba(202, 178, 146, 0.34)';
+            ctx.fillRect(195, 166, 305, 18);
+            ctx.fillStyle = 'rgba(244, 242, 238, 0.30)';
+            ctx.fillRect(280, 184, 220, 56);
+
+            // Reflets spéculaires diagonaux discrets sur le verre
+            const sheen = ctx.createLinearGradient(0, 0, w, h);
+            sheen.addColorStop(0.00, 'rgba(255,255,255,0.16)');
+            sheen.addColorStop(0.32, 'rgba(255,255,255,0.03)');
+            sheen.addColorStop(0.54, 'rgba(255,255,255,0.20)');
+            sheen.addColorStop(0.75, 'rgba(255,255,255,0.02)');
+            sheen.addColorStop(1.00, 'rgba(255,255,255,0.12)');
+            ctx.fillStyle = sheen;
+            ctx.fillRect(0, 0, w, h);
+
+            const tex = new THREE.CanvasTexture(c);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+          }
+
+          const ironFrameMat = new THREE.MeshStandardMaterial({
+            color: 0x24282c,
+            roughness: 0.38,
+            metalness: 0.72
+          });
+          const rivetSteelMat = new THREE.MeshStandardMaterial({
+            color: 0x626a73,
+            roughness: 0.28,
+            metalness: 0.86
+          });
+          const verriereGlassMat = new THREE.MeshStandardMaterial({
+            map: createVerriereMirrorReflectionTexture(),
+            color: 0xe6edf4,
+            roughness: 0.06,
+            metalness: 0.76
+          });
+
+          const mW = 2.04, mH = 1.15, mDepth = 0.030;
+          const barOut = 0.034, barMid = 0.028;
+          const paneCount = 5;
+          const mir = new THREE.Group();
+          mir.position.set(bX, 0.835 + mH * 0.5, 4.002);
+          livGroup.add(mir);
+
+          // Cadre métallique périphérique industriel (haut, bas, gauche, droite)
+          addLivMesh(new THREE.BoxGeometry(mW, barOut, mDepth), ironFrameMat, 0,  mH * 0.5 - barOut * 0.5, 0, 0, 0, 0, mir);
+          addLivMesh(new THREE.BoxGeometry(mW, barOut, mDepth), ironFrameMat, 0, -mH * 0.5 + barOut * 0.5, 0, 0, 0, 0, mir);
+          addLivMesh(new THREE.BoxGeometry(barOut, mH, mDepth), ironFrameMat, -mW * 0.5 + barOut * 0.5, 0, 0, 0, 0, 0, mir);
+          addLivMesh(new THREE.BoxGeometry(barOut, mH, mDepth), ironFrameMat,  mW * 0.5 - barOut * 0.5, 0, 0, 0, 0, 0, mir);
+
+          // Fond miroir continu derrière les 5 carreaux (réflexion fluide sur toute la largeur)
+          const mirrorBack = new THREE.Mesh(
+            new THREE.PlaneGeometry(mW - barOut * 1.6, mH - barOut * 1.6),
+            verriereGlassMat
+          );
+          mirrorBack.position.z = 0.004;
+          mir.add(mirrorBack);
+
+          // 4 montants verticaux intermédiaires divisant le miroir en 5 grands panneaux verticaux
+          const innerSpanW = mW - barOut;
+          const stepX = innerSpanW / paneCount;
+          const innerH = mH - barOut * 2;
+
+          // Helper pour créer un petit gousset d'angle arrondi + rivets métalliques à chaque jonction
+          const addCornerGusset = (gx, gy, flipX, flipY) => {
+            const gusset = new THREE.Mesh(new THREE.BoxGeometry(0.036, 0.036, mDepth * 0.96), ironFrameMat);
+            gusset.position.set(gx + flipX * 0.012, gy + flipY * 0.012, 0.001);
+            gusset.rotation.z = Math.PI / 4;
+            mir.add(gusset);
+          };
+          const addRivet = (rx, ry) => {
+            const rv = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.007, 8), rivetSteelMat);
+            rv.rotation.x = Math.PI / 2;
+            rv.position.set(rx, ry, mDepth * 0.5 + 0.002);
+            mir.add(rv);
+          };
+
+          // Goussets & rivets aux 4 angles extérieurs du miroir verrière
+          [
+            [-mW * 0.5 + barOut * 0.5,  mH * 0.5 - barOut * 0.5,  1, -1],
+            [ mW * 0.5 - barOut * 0.5,  mH * 0.5 - barOut * 0.5, -1, -1],
+            [-mW * 0.5 + barOut * 0.5, -mH * 0.5 + barOut * 0.5,  1,  1],
+            [ mW * 0.5 - barOut * 0.5, -mH * 0.5 + barOut * 0.5, -1,  1]
+          ].forEach(([cx, cy, fx, fy]) => {
+            addCornerGusset(cx, cy, fx, fy);
+            addRivet(cx + fx * 0.004, cy + fy * 0.004);
+          });
+
+          // 4 meneaux verticaux + plaques d'assemblage en T + goussets haut/bas & rivets industriels
+          for (let k = 1; k < paneCount; k++) {
+            const mx = -innerSpanW * 0.5 + k * stepX;
+            addLivMesh(new THREE.BoxGeometry(barMid, innerH + 0.01, mDepth), ironFrameMat, mx, 0, 0.001, 0, 0, 0, mir);
+
+            // Jonctions haute et basse en T avec goussets arrondis de chaque côté & doubles rivets
+            [mH * 0.5 - barOut * 0.5, -mH * 0.5 + barOut * 0.5].forEach(jy => {
+              const fy = jy > 0 ? -1 : 1;
+              addLivMesh(new THREE.BoxGeometry(0.076, 0.044, mDepth + 0.004), ironFrameMat, mx, jy + fy * 0.006, 0.001, 0, 0, 0, mir);
+              addCornerGusset(mx, jy, -1, fy);
+              addCornerGusset(mx, jy,  1, fy);
+              addRivet(mx - 0.018, jy + fy * 0.002);
+              addRivet(mx + 0.018, jy + fy * 0.002);
+            });
+          }
+        }
       }
 
       // 8. Spots LED ronds encastrés discrets au plafond (visibles sur la photo, allumés en mode Nuit)
