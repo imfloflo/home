@@ -574,71 +574,270 @@
     // 3. TEXTURES PROCÉDURALES (ENDUIT, TUILES CANAL ROUGES, DALLES 60×60 CM)
     // =========================================================================
     function createStuccoTexture() {
-      const c = document.createElement('canvas');
-      c.width = 256; c.height = 256;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#f3f1ec';
-      ctx.fillRect(0, 0, 256, 256);
-      for (let i = 0; i < 14000; i++) {
-        const v = 230 + Math.floor(Math.random() * 20);
-        ctx.fillStyle = `rgb(${v},${v - 2},${v - 6})`;
-        ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+      const size = 512;
+      const cCol = document.createElement('canvas');
+      cCol.width = size; cCol.height = size;
+      const ctx = cCol.getContext('2d');
+
+      const cBmp = document.createElement('canvas');
+      cBmp.width = size; cBmp.height = size;
+      const bCtx = cBmp.getContext('2d');
+
+      // Générateur pseudo-aléatoire déterministe pour un grain homogène et répétable sans couture
+      let seed = 42197;
+      const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+
+      // Dessin toroïdal sans raccord sur les bords 0..512
+      const drawTiledDot = (targetCtx, x, y, w, h, color) => {
+        targetCtx.fillStyle = color;
+        for (let ox = -1; ox <= 1; ox++) {
+          const dx = x + ox * size;
+          if (dx + w < 0 || dx > size) continue;
+          for (let oy = -1; oy <= 1; oy++) {
+            const dy = y + oy * size;
+            if (dy + h < 0 || dy > size) continue;
+            targetCtx.fillRect(dx, dy, w, h);
+          }
+        }
+      };
+
+      // Fond minéral Weber blanc cassé lumineux et chaud
+      ctx.fillStyle = '#f8f2e5';
+      ctx.fillRect(0, 0, size, size);
+      bCtx.fillStyle = '#b4b4b4';
+      bCtx.fillRect(0, 0, size, size);
+
+      // 1. Subtiles nuances nuagées d'enduit monocouche minéral
+      for (let i = 0; i < 180; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const r = 14 + rand() * 28;
+        const col = rand() > 0.45 ? 'rgba(255,252,244,0.22)' : 'rgba(235,223,198,0.16)';
+        for (let ox = -1; ox <= 1; ox++) {
+          for (let oy = -1; oy <= 1; oy++) {
+            const cx = x + ox * size, cy = y + oy * size;
+            if (cx + r < 0 || cx - r > size || cy + r < 0 || cy - r > size) continue;
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
       }
-      const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(0.6, 0.6);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
+
+      // 2. Pâte grattée fine blanc cassé / ivoire + relief haute fréquence
+      for (let i = 0; i < 24000; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const w = 1.2 + rand() * 2.6;
+        const h = 1.2 + rand() * 2.6;
+        const t = rand();
+        const rC = Math.round(244 + t * 11);
+        const gC = Math.round(236 + t * 14);
+        const bC = Math.round(220 + t * 18);
+        drawTiledDot(ctx, x, y, w, h, `rgb(${rC},${gC},${bC})`);
+
+        const bv = Math.round(165 + t * 78);
+        drawTiledDot(bCtx, x, y, w, h, `rgb(${bv},${bv},${bv})`);
+      }
+
+      // 3. Petits granulats minéraux ocre / sable doré caractéristiques du Weber blanc cassé
+      const aggregateColors = [
+        '#e5d2a8', '#d9bf8d', '#cbb07b', '#eadab7', '#dec798', '#c6a772'
+      ];
+      for (let i = 0; i < 5200; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const w = 1.6 + rand() * 3.0;
+        const h = 1.4 + rand() * 2.8;
+        const col = aggregateColors[Math.floor(rand() * aggregateColors.length)];
+        drawTiledDot(ctx, x, y, w, h, col);
+        drawTiledDot(bCtx, x, y, w, h, rand() > 0.35 ? '#e6e6e6' : '#8f8f8f');
+      }
+
+      // 4. Micro-cavités & griffures grattées (ombres chaudes brun/taupe clair)
+      const poreColors = [
+        'rgba(146,120,86,0.58)',
+        'rgba(122,98,68,0.52)',
+        'rgba(170,145,108,0.55)',
+        'rgba(98,78,54,0.45)'
+      ];
+      for (let i = 0; i < 4200; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const w = 1.0 + rand() * 1.9;
+        const h = 1.3 + rand() * 3.2; // Légèrement verticalisé comme un passage de gratton
+        const col = poreColors[Math.floor(rand() * poreColors.length)];
+        drawTiledDot(ctx, x, y, w, h, col);
+
+        const bv = Math.round(45 + rand() * 55);
+        drawTiledDot(bCtx, x, y, w, h, `rgb(${bv},${bv},${bv})`);
+        // Arête claire adjacente pour accentuer le grain gratté
+        drawTiledDot(ctx, x + w * 0.7, y - 0.5, 1.3, 1.5, 'rgba(255,253,248,0.75)');
+      }
+
+      const map = new THREE.CanvasTexture(cCol);
+      map.wrapS = map.wrapT = THREE.RepeatWrapping;
+      map.repeat.set(2.2, 2.2);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.anisotropy = 8;
+
+      const bumpMap = new THREE.CanvasTexture(cBmp);
+      bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+      bumpMap.repeat.set(2.2, 2.2);
+      bumpMap.anisotropy = 8;
+
+      return { map, bumpMap };
     }
 
     function createTerracottaTileTextures() {
-      const w = 512, h = 512;
+      // Tuiles béton Monier Plein Ciel — teinte Rouge Sienne NV (double galbe + nez ondulé)
+      const w = 1024, h = 1024;
       const cCol = document.createElement('canvas');
       cCol.width = w; cCol.height = h;
       const cCtx = cCol.getContext('2d');
+      const colImg = cCtx.createImageData(w, h);
+      const colData = colImg.data;
 
       const cBmp = document.createElement('canvas');
       cBmp.width = w; cBmp.height = h;
       const bCtx = cBmp.getContext('2d');
+      const bmpImg = bCtx.createImageData(w, h);
+      const bmpData = bmpImg.data;
 
-      cCtx.fillStyle = '#b4482d';
-      cCtx.fillRect(0, 0, w, h);
-      bCtx.fillStyle = '#505050';
-      bCtx.fillRect(0, 0, w, h);
+      const waves = 16;             // 16 galbes (8 tuiles double-onde sur ~2,38 m)
+      const rows = 8;               // 8 rangs (pureau réaliste ~30 cm)
+      const pxPerWave = w / waves;  // 64 px exacts par galbe
 
-      const cols = 16, rows = 12;
-      const cw = w / cols, rh = h / rows;
+      // Profil précalculé d'un galbe Plein Ciel (arche ample et creux net)
+      const archLUT = new Float32Array(pxPerWave);
+      const slopeLUT = new Float32Array(pxPerWave);
+      for (let k = 0; k < pxPerWave; k++) {
+        const fx = k / pxPerWave;
+        archLUT[k] = Math.pow(Math.sin(fx * Math.PI), 0.70);
+      }
+      for (let k = 0; k < pxPerWave; k++) {
+        const prev = archLUT[(k + pxPerWave - 1) % pxPerWave];
+        const next = archLUT[(k + 1) % pxPerWave];
+        slopeLUT[k] = (next - prev) * 14.0;
+      }
 
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const x = c * cw, y = r * rh;
-          const tone = Math.sin(r * 11.3 + c * 7.9) * 0.5 + 0.5;
-          const R = Math.round(182 + tone * 22);
-          const G = Math.round(74 + tone * 16);
-          const B = Math.round(48 + tone * 10);
+      // Hash déterministe rapide pour le grain minéral béton et la micro-variation de teinte
+      const hash2 = (a, b) => {
+        let n = (a * 374761393 + b * 668265263) ^ 0x5bf03635;
+        n = Math.imul(n ^ (n >>> 13), 1274126177);
+        return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+      };
 
-          const grad = cCtx.createLinearGradient(x, y, x + cw, y);
-          grad.addColorStop(0.0, `rgb(${R - 42},${G - 18},${B - 12})`);
-          grad.addColorStop(0.3, `rgb(${R + 14},${G + 8},${B + 5})`);
-          grad.addColorStop(0.6, `rgb(${R},${G},${B})`);
-          grad.addColorStop(1.0, `rgb(${R - 46},${G - 20},${B - 13})`);
-          cCtx.fillStyle = grad;
-          cCtx.fillRect(x, y, cw, rh - 1.5);
+      const clamp255 = (v) => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 
-          cCtx.fillStyle = 'rgba(46, 14, 7, 0.36)';
-          cCtx.fillRect(x, y + rh - 3.5, cw, 3.5);
+      for (let py = 0; py < h; py++) {
+        const yRowBase = (py / h) * rows;
+        const rowOff = py * w;
 
-          const bGrad = bCtx.createLinearGradient(x, y, x + cw, y);
-          bGrad.addColorStop(0.0, '#262626');
-          bGrad.addColorStop(0.35, '#eaeaea');
-          bGrad.addColorStop(0.65, '#c4c4c4');
-          bGrad.addColorStop(1.0, '#202020');
-          bCtx.fillStyle = bGrad;
-          bCtx.fillRect(x, y, cw, rh - 2);
-          bCtx.fillStyle = '#181818';
-          bCtx.fillRect(x, y + rh - 3, cw, 3);
+        for (let px = 0; px < w; px++) {
+          const k = px & 63; // px % 64
+          const colIdx = px >> 6;
+          const tileCol = colIdx >> 1; // 2 galbes par tuile Plein Ciel
+          const isSecondWave = colIdx & 1;
+
+          const arch = archLUT[k];
+          const slopeX = slopeLUT[k];
+
+          // Ondulation prononcée du nez de tuile suivant le galbe (bord festonné)
+          const waveDip = -0.145 * arch;
+          const vCourse = yRowBase + waveDip + rows;
+          const rowIdx = Math.floor(vCourse) % rows;
+          const rowPhase = vCourse - Math.floor(vCourse); // 0 = haut sous recouvrement, 1 = nez de tuile
+
+          // Subtile variation minérale par tuile (teinte Rouge Sienne NV homogène et profonde)
+          const tileVar = (hash2(tileCol + 17, rowIdx + 31) - 0.5) * 0.07;
+
+          // Base couleur Rouge Sienne NV (terre cuite sienne soutenue)
+          let r = 172 * (1.0 + tileVar);
+          let g = 64  * (1.0 + tileVar * 0.9);
+          let b = 45  * (1.0 + tileVar * 0.85);
+
+          // Modelé 3D du galbe : sommet lumineux chaud, flancs ombrés, creux profond
+          const crestBoost = 0.74 + 0.34 * arch + 0.14 * slopeX;
+          r *= crestBoost;
+          g *= crestBoost * (0.97 + 0.06 * arch);
+          b *= crestBoost * (0.96 + 0.06 * arch);
+
+          // Occlusion fine dans le creux entre deux ondes + rainure d'emboîtement toutes les 2 ondes
+          const valleyAO = 0.60 + 0.40 * Math.pow(arch, 0.36);
+          const isInterlockSeam = (isSecondWave === 0 && k <= 2) || (isSecondWave === 1 && k >= 62);
+          const seamFactor = isInterlockSeam ? 0.56 : 1.0;
+          const occ = valleyAO * seamFactor;
+          r *= occ;
+          g *= occ;
+          b *= occ;
+
+          // Dégradé longitudinal doux le long de la tuile (légèrement plus lumineux vers le nez)
+          const alongFactor = 0.94 + 0.10 * rowPhase;
+          r *= alongFactor;
+          g *= alongFactor;
+          b *= alongFactor;
+
+          // Ombre portée franche sous le nez festonné du rang supérieur (rowPhase 0..0.14)
+          let lipShadow = 1.0;
+          if (rowPhase < 0.14) {
+            const shadowDepth = 0.055 + 0.025 * (1.0 - arch);
+            if (rowPhase < shadowDepth) {
+              lipShadow = 0.20 + 0.16 * (rowPhase / shadowDepth);
+            } else {
+              const tS = (rowPhase - shadowDepth) / (0.14 - shadowDepth);
+              lipShadow = 0.36 + 0.64 * (tS * tS * (3 - 2 * tS));
+            }
+          }
+
+          // Biseau et tranche épaisse du nez de tuile béton (rowPhase 0.88..1.0)
+          let heightRow = rowPhase * 0.85;
+          if (rowPhase > 0.88) {
+            const edgeNoise = (hash2(px >> 1, rowIdx * 97 + (py >> 1)) - 0.5) * 0.025;
+            const rp = rowPhase + edgeNoise;
+            if (rp < 0.94) {
+              // Arrondi lumineux du bord supérieur du nez
+              const tB = (rp - 0.88) / 0.06;
+              const bevel = 1.06 - 0.24 * tB;
+              lipShadow *= bevel;
+              heightRow = 0.85 - 0.15 * tB;
+            } else {
+              // Tranche frontale épaisse sombre et granuleuse du béton teinté masse
+              const tL = Math.min(1, (rp - 0.94) / 0.06);
+              lipShadow *= (0.58 - 0.34 * tL);
+              heightRow = 0.70 * (1.0 - tL);
+            }
+          }
+
+          r *= lipShadow;
+          g *= lipShadow;
+          b *= lipShadow;
+
+          // Micro-grain minéral caractéristique de la tuile béton Monier
+          const grain = (hash2(px, py) - 0.5) * 14.0 + (hash2(px >> 1, py >> 1) - 0.5) * 8.0;
+          const idx = (rowOff + px) << 2;
+          colData[idx]     = clamp255(r + grain);
+          colData[idx + 1] = clamp255(g + grain * 0.65);
+          colData[idx + 2] = clamp255(b + grain * 0.55);
+          colData[idx + 3] = 255;
+
+          // Carte de relief synchronisée (galbe + recouvrement de rang + grain)
+          const seamDip = isInterlockSeam ? 0.14 : 0.0;
+          const hVal = (arch * 0.62 + heightRow * 0.38 - seamDip) * 235 + grain * 0.9;
+          const bByte = clamp255(hVal);
+          bmpData[idx]     = bByte;
+          bmpData[idx + 1] = bByte;
+          bmpData[idx + 2] = bByte;
+          bmpData[idx + 3] = 255;
         }
       }
+
+      cCtx.putImageData(colImg, 0, 0);
+      bCtx.putImageData(bmpImg, 0, 0);
 
       const map = new THREE.CanvasTexture(cCol);
       map.wrapS = map.wrapT = THREE.RepeatWrapping;
@@ -733,7 +932,14 @@
     // 4. MATÉRIAUX ARCHITECTURAUX
     // =========================================================================
     const mat = {
-      extWall: new THREE.MeshStandardMaterial({ color: 0xf3f1ec, map: stuccoTex, roughness: 0.86, metalness: 0.02 }),
+      extWall: new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: stuccoTex.map,
+        bumpMap: stuccoTex.bumpMap,
+        bumpScale: 0.024,
+        roughness: 0.91,
+        metalness: 0.01
+      }),
       intWall: new THREE.MeshStandardMaterial({ color: 0xf8f7f4, roughness: 0.90 }),
       doorLeaf: new THREE.MeshStandardMaterial({ color: 0xebe6dd, roughness: 0.65 }),
       slab: new THREE.MeshStandardMaterial({ color: 0xd8d4cc, roughness: 0.88 }),
@@ -756,13 +962,13 @@
       roofTiles: new THREE.MeshStandardMaterial({
         map: roofTileTex.map,
         bumpMap: roofTileTex.bumpMap,
-        bumpScale: 0.055,
-        roughness: 0.78,
-        metalness: 0.04,
+        bumpScale: 0.075,
+        roughness: 0.72,
+        metalness: 0.03,
         transparent: false,
         opacity: 1.0
       }),
-      roofRidge: new THREE.MeshStandardMaterial({ color: 0xa23c23, roughness: 0.72, transparent: false, opacity: 1.0 }),
+      roofRidge: new THREE.MeshStandardMaterial({ color: 0x9c3725, roughness: 0.68, transparent: false, opacity: 1.0 }),
       roofSoffit: new THREE.MeshStandardMaterial({ color: 0xf7f7f7, roughness: 0.65, transparent: false, opacity: 1.0 }),
       gutterAlu: new THREE.MeshStandardMaterial({ color: 0x565d65, roughness: 0.42, metalness: 0.48, transparent: false, opacity: 1.0 }),
       terraceTop: new THREE.MeshStandardMaterial({ map: terrace60Tex, roughness: 0.74 }),
@@ -1444,7 +1650,7 @@
     roofTopGeom.setAttribute('normal', new THREE.Float32BufferAttribute(roofNorm, 3));
     roofTopGeom.setAttribute('uv', new THREE.Float32BufferAttribute(roofUV, 2));
     const roofTopMesh = new THREE.Mesh(roofTopGeom, mat.roofTiles);
-    tagPrintable(roofTopMesh, 'Toiture', '#B4482D');
+    tagPrintable(roofTopMesh, 'Toiture', '#A93E2B');
     roofGroup.add(roofTopMesh);
 
     // Bandeau de rive périphérique + sous-face plane PVC blanc (volume fermé étanche)
@@ -1483,7 +1689,7 @@
       const cap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.09, len), mat.roofRidge);
       cap.position.set(mid.x, mid.y + 0.02, mid.z);
       cap.lookAt(b.x, b.y + 0.02, b.z);
-      tagPrintable(cap, 'Toiture', '#A23C23');
+      tagPrintable(cap, 'Toiture', '#9C3725');
       roofGroup.add(cap);
     });
 
@@ -2297,19 +2503,27 @@
       );
     }
 
-    // Petit croissant de cailloux blancs côté gauche devant la terrasse (vu sur la vue drone large)
+    // Zone de cailloux blancs en arc à l'angle Ouest de la maison (près de la séparation herbe / gravier gris)
     {
-      const leftCrescentBot = new THREE.SplineCurve([
-        new THREE.Vector2(2.05, 12.96),
-        new THREE.Vector2(2.85, 13.58),
-        new THREE.Vector2(3.75, 13.72),
-        new THREE.Vector2(4.65, 13.52),
-        new THREE.Vector2(5.35, 12.96)
+      const uStart = -8.20;
+      const uEnd   = -3.15;
+      const vEdge  = 19.86; // Raccord net sous le bord biseauté de la terrasse (v = 19,88)
+      const westCornerCurveUV = new THREE.SplineCurve([
+        new THREE.Vector2(uStart, vEdge),
+        new THREE.Vector2(-7.45, 20.42),
+        new THREE.Vector2(-6.50, 20.98),
+        new THREE.Vector2(-5.35, 21.38),
+        new THREE.Vector2(-4.20, 21.24),
+        new THREE.Vector2(-3.45, 20.68),
+        new THREE.Vector2(uEnd,   vEdge)
       ]);
       addDrapedPebbleBed(
-        (t) => new THREE.Vector2(THREE.MathUtils.lerp(2.05, 5.35, t), 12.96),
-        (t) => leftCrescentBot.getPoint(t),
-        22, 5
+        (t) => uvToPlan(THREE.MathUtils.lerp(uStart, uEnd, t), vEdge),
+        (t) => {
+          const pUV = westCornerCurveUV.getPoint(t);
+          return uvToPlan(pUV.x, pUV.y);
+        },
+        30, 7
       );
     }
 
@@ -2469,20 +2683,87 @@
     }
 
     // Implantation fidèle à la photo :
-    // 1) Massif supérieur (1 miscanthus central + petit arbuste taillé à l'angle terrasse/bordure)
+    // 1) Massif supérieur (1 miscanthus central + buis 3 boules sur tiges à l'angle terrasse/bordure près du garage)
     addMiscanthus(10.10, 13.45, 1.05, 11);
     {
       const pCorner = uvToPlan(getCarZoneCurbU(12.55) - 0.28, 12.55);
       const yC = getTerrainHeight(pCorner.x, pCorner.y) + 0.02;
-      const gTop = new THREE.Group();
-      gTop.position.set(pCorner.x, yC, pCorner.y);
-      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.22, 6), trunkMat);
-      st.position.y = 0.11; gTop.add(st);
-      const b1 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.24, 1), shrubMat);
-      b1.position.set(0.04, 0.26, 0.02); b1.scale.set(1.15, 0.72, 1.15); b1.castShadow = true; gTop.add(b1);
-      const b2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18, 1), leafMat2);
-      b2.position.set(-0.18, 0.22, -0.10); b2.scale.set(1.1, 0.72, 1.1); b2.castShadow = true; gTop.add(b2);
-      envGroup.add(gTop);
+      const gBuis = new THREE.Group();
+      gBuis.position.set(pCorner.x, yC, pCorner.y);
+      gBuis.rotation.y = -Math.PI / 4;
+
+      // Écorce claire des tiges de buis et 3 nuances de feuillage persistant
+      const buisStemMat = new THREE.MeshStandardMaterial({ color: 0x9b8464, roughness: 0.90 });
+      const buisCoreMat = new THREE.MeshStandardMaterial({ color: 0x264220, roughness: 0.92 });
+      const buisLeafMats = [
+        new THREE.MeshStandardMaterial({ color: 0x2f5227, roughness: 0.86 }),
+        new THREE.MeshStandardMaterial({ color: 0x3e6831, roughness: 0.84 }),
+        new THREE.MeshStandardMaterial({ color: 0x56823f, roughness: 0.82 })
+      ];
+
+      // Générateur déterministe pour le micro-relief du feuillage taillé
+      let bSeed = 82471;
+      const bRand = () => {
+        bSeed = (bSeed * 1664525 + 1013904223) >>> 0;
+        return bSeed / 4294967296;
+      };
+
+      const addBuisStemAndBall = (baseXZ, midXYZ, topXYZ, ballRadius, stemRadius) => {
+        // Tige ligneuse élancée reliant le pied au centre de la boule
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(baseXZ[0], 0.0, baseXZ[1]),
+          new THREE.Vector3(midXYZ[0], midXYZ[1], midXYZ[2]),
+          new THREE.Vector3(topXYZ[0], topXYZ[1] - ballRadius * 0.45, topXYZ[2])
+        ]);
+        const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, stemRadius, 7, false), buisStemMat);
+        stem.castShadow = true;
+        stem.receiveShadow = true;
+        gBuis.add(stem);
+
+        // Cœur dense sombre de la boule de buis
+        const ballGrp = new THREE.Group();
+        ballGrp.position.set(topXYZ[0], topXYZ[1], topXYZ[2]);
+
+        const core = new THREE.Mesh(new THREE.IcosahedronGeometry(ballRadius * 0.88, 2), buisCoreMat);
+        core.castShadow = true;
+        core.receiveShadow = true;
+        ballGrp.add(core);
+
+        // Touffes de petites feuilles de buis réparties en spirale de Fibonacci
+        const tuftCount = Math.round(52 * (ballRadius / 0.22));
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+        const tuftGeom = new THREE.DodecahedronGeometry(ballRadius * 0.20, 0);
+
+        for (let i = 0; i < tuftCount; i++) {
+          const yNorm = 1 - (i / (tuftCount - 1)) * 2;
+          const radAtY = Math.sqrt(Math.max(0, 1 - yNorm * yNorm));
+          const theta = goldenAngle * i + (bRand() - 0.5) * 0.25;
+          const dist = ballRadius * (0.80 + bRand() * 0.16);
+
+          const matIdx = yNorm > 0.25 ? (bRand() > 0.45 ? 2 : 1) : (bRand() > 0.5 ? 1 : 0);
+          const tuft = new THREE.Mesh(tuftGeom, buisLeafMats[matIdx]);
+          tuft.position.set(
+            Math.cos(theta) * radAtY * dist,
+            yNorm * dist,
+            Math.sin(theta) * radAtY * dist
+          );
+          const sc = 0.72 + bRand() * 0.48;
+          tuft.scale.set(sc, sc * (0.82 + bRand() * 0.3), sc);
+          tuft.rotation.set(bRand() * Math.PI, bRand() * Math.PI, bRand() * Math.PI);
+          tuft.castShadow = true;
+          tuft.receiveShadow = true;
+          ballGrp.add(tuft);
+        }
+
+        gBuis.add(ballGrp);
+      };
+
+      // 3 boules étagées sur tiges comme sur la photo (haute au centre, moyenne à droite, basse inclinée à gauche)
+      addBuisStemAndBall([ 0.00,  0.00], [ 0.01, 0.52, -0.01], [ 0.00, 1.06,  0.00], 0.235, 0.018);
+      addBuisStemAndBall([ 0.03,  0.02], [ 0.09, 0.36,  0.05], [ 0.15, 0.70,  0.08], 0.180, 0.015);
+      addBuisStemAndBall([-0.04,  0.01], [-0.14, 0.27,  0.03], [-0.24, 0.54,  0.04], 0.175, 0.015);
+
+      envGroup.add(gBuis);
     }
 
     // 2) Massif inférieur-droit en vague S (4 miscanthus répartis comme sur la photo)
@@ -2496,9 +2777,15 @@
       addMiscanthus(p.x, p.y, s, seed);
     });
 
-    // 3) Petit croissant de cailloux blancs à gauche devant la terrasse (2 miscanthus)
-    addMiscanthus(3.05, 13.30, 0.78, 31);
-    addMiscanthus(4.45, 13.32, 0.74, 32);
+    // 3) Zone de cailloux blancs à l'angle Ouest près de la séparation herbe / gravier gris (3 miscanthus)
+    [
+      { u: -6.92, v: 20.68, s: 0.96, seed: 31 },
+      { u: -5.52, v: 21.12, s: 0.84, seed: 32 },
+      { u: -4.20, v: 20.96, s: 1.02, seed: 33 }
+    ].forEach(({ u, v, s, seed }) => {
+      const p = uvToPlan(u, v);
+      addMiscanthus(p.x, p.y, s, seed);
+    });
 
     // Boussole Nord minimale placée dans la pelouse Nord-Ouest
     const compassPos = uvToPlan(-17.5, 19.5);
