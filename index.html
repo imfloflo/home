@@ -2557,21 +2557,49 @@
       return THREE.MathUtils.clamp(h, -2.35, 0.55);
     }
 
-    // Emprise cadastrale exacte en repère (u, v) :
-    // - Parcelle 285 : u ∈ [-21.5, 14.4], v ∈ [-3.0, 23.4] (jardin + maison + cour)
-    // - Allée en cailloux (Parcelles 286 & 93) : u ∈ [14.4, 43.2], v ∈ [16.6, 23.4]
-    // - Amorce Avenue de V : u ∈ [43.2, 47.0], v ∈ [14.2, 23.4]
-    const U_MIN = -21.5, U_MAX = 47.0;
-    const V_MIN = -3.0,  V_MAX = 23.4;
-    const BASE_Y = -2.85;
-    const NU = 86, NV = 33;
+    // Emprise cadastrale exacte en repère (u, v), maillage calé au millimètre sur les grillages & la route :
+    // - Parcelle 285 : u ∈ [-21.5, 14.3], v ∈ [-3.0, 23.3] (jardin + maison + cour)
+    // - Pan coupé angle 284 : diagonale exacte (14.3, 15.0) -> (15.9, 16.6)
+    // - Allée en cailloux (Parcelles 286 & 93) : u ∈ [15.9, 43.2], v ∈ [16.6, 23.1] (alignée sur les 2 grillages)
+    // - Amorce Avenue de V : u ∈ [43.2, 47.0], v ∈ [14.2, 23.1]
+    function buildAxisCoords(segments) {
+      const coords = [segments[0][0]];
+      for (const [start, end, steps] of segments) {
+        for (let i = 1; i <= steps; i++) {
+          coords.push(start + (end - start) * (i / steps));
+        }
+      }
+      return coords;
+    }
 
-    function isInsideParcelUV(u, v) {
-      if (u < U_MIN || u > U_MAX || v < V_MIN || v > V_MAX) return false;
-      if (u <= 14.4) return true;                                  // Parcelle 285
-      if (u <= 16.0) return v >= (15.0 + (u - 14.4));              // Pan coupé angle 284
-      if (u <= 43.2) return v >= 16.6;                             // Allée parcelles 286 & 93
-      return v >= 14.2;                                            // Bande Avenue de V
+    const uCoords = buildAxisCoords([
+      [-21.5, 14.3, 44],
+      [ 14.3, 15.9,  4],
+      [ 15.9, 43.2, 34],
+      [ 43.2, 47.0,  5]
+    ]);
+    const vCoords = buildAxisCoords([
+      [ -3.0, 14.2, 21],
+      [ 14.2, 15.0,  2],
+      [ 15.0, 16.6,  4],
+      [ 16.6, 23.1,  8],
+      [ 23.1, 23.3,  1]
+    ]);
+    const NU = uCoords.length - 1;
+    const NV = vCoords.length - 1;
+    const BASE_Y = -2.85;
+
+    // Retourne 1 (cellule pleine), 2 (demi-cellule diagonale sous le grillage du pan coupé), ou 0 (hors emprise)
+    function getCellState(uc, vc) {
+      if (uc < 14.3) return 1;                             // Parcelle 285
+      if (vc > 23.1) return 0;                             // Arrêt net au grillage Ouest de l'allée (v = 23.1)
+      if (uc < 15.9) {
+        const diff = vc - uc;                              // Droite du grillage pan coupé : v - u = 0.7
+        if (Math.abs(diff - 0.7) < 0.01) return 2;         // Cellule coupée exactement selon le grillage à 45°
+        return diff > 0.7 ? 1 : 0;
+      }
+      if (uc < 43.2) return vc > 16.6 ? 1 : 0;             // Allée alignée entre v = 16.6 et v = 23.1
+      return vc > 14.2 ? 1 : 0;                            // Bande Avenue de V
     }
 
     // Texture procédurale partagée de gravier concassé gris anthracite (identique à l'arrière, devant le garage et dans l'allée)
@@ -2601,31 +2629,132 @@
       metalness: 0.01
     });
 
+    // Texture procédurale sans raccord de gazon dense tondu (fidèle à la photo du gazon)
+    function createLawnGrassTexture() {
+      const size = 512;
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      const ctx = c.getContext('2d');
+
+      // Générateur déterministe pour un rendu naturel reproductible
+      let seed = 73915;
+      const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+
+      // Fond de base vert mousse profond (base des brins à l'ombre)
+      ctx.fillStyle = '#4c6717';
+      ctx.fillRect(0, 0, size, size);
+
+      // 1. Nuances organiques douces en nuages (sans raccord toroïdal)
+      for (let i = 0; i < 240; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const r = 16 + rand() * 38;
+        const col = rand() > 0.48
+          ? 'rgba(126, 154, 42, 0.14)'
+          : 'rgba(62, 86, 18, 0.15)';
+        for (let ox = -1; ox <= 1; ox++) {
+          for (let oy = -1; oy <= 1; oy++) {
+            const cx = x + ox * size, cy = y + oy * size;
+            if (cx + r < 0 || cx - r > size || cy + r < 0 || cy - r > size) continue;
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Helper pour tracer un brin d'herbe fin avec bouclage toroïdal parfait
+      const drawBlade = (x, y, len, angle, width, color) => {
+        const dx = Math.cos(angle) * len;
+        const dy = Math.sin(angle) * len;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        for (let ox = -1; ox <= 1; ox++) {
+          const sx = x + ox * size;
+          if (sx + len < 0 || sx - len > size) continue;
+          for (let oy = -1; oy <= 1; oy++) {
+            const sy = y + oy * size;
+            if (sy + len < 0 || sy - len > size) continue;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + dx, sy + dy);
+            ctx.stroke();
+          }
+        }
+      };
+
+      // 2. Passe ombre : brins profonds densement serrés
+      const darkBlades = ['#374e10', '#425b14', '#4a6617', '#516e19'];
+      for (let i = 0; i < 15000; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const len = 5 + rand() * 8;
+        const ang = (rand() - 0.5) * Math.PI * 2;
+        const w = 1.1 + rand() * 1.1;
+        drawBlade(x, y, len, ang, w, darkBlades[Math.floor(rand() * darkBlades.length)]);
+      }
+
+      // 3. Passe médiane : feuillage principal vert prairie chaud
+      const midBlades = ['#5f7e1d', '#6b8b22', '#749426', '#7e9e2b', '#678620'];
+      for (let i = 0; i < 19000; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const len = 4 + rand() * 8;
+        const ang = -Math.PI * 0.5 + (rand() - 0.5) * 1.9;
+        const w = 0.9 + rand() * 1.0;
+        drawBlade(x, y, len, ang, w, midBlades[Math.floor(rand() * midBlades.length)]);
+      }
+
+      // 4. Passe lumière : pointes de brins ensoleillées jaune-vert veloutées
+      const tipBlades = ['#8ba933', '#98b43b', '#a4be45', '#83a12e', '#949e3a'];
+      for (let i = 0; i < 9500; i++) {
+        const x = rand() * size;
+        const y = rand() * size;
+        const len = 2.5 + rand() * 5.0;
+        const ang = -Math.PI * 0.5 + (rand() - 0.5) * 1.6;
+        const w = 0.8 + rand() * 0.7;
+        drawBlade(x, y, len, ang, w, tipBlades[Math.floor(rand() * tipBlades.length)]);
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    const GRASS_UV_SCALE = 0.46; // Finesse réaliste des brins de gazon
+    const sharedGrassTex = createLawnGrassTexture();
+
     function buildSolidTerrain() {
       const grid = [];
       for (let iv = 0; iv <= NV; iv++) {
         const row = [];
-        const v = THREE.MathUtils.lerp(V_MIN, V_MAX, iv / NV);
+        const v = vCoords[iv];
         for (let iu = 0; iu <= NU; iu++) {
-          const u = THREE.MathUtils.lerp(U_MIN, U_MAX, iu / NU);
+          const u = uCoords[iu];
           const p = uvToPlan(u, v);
           row.push({ pos: new THREE.Vector3(p.x, getTerrainHeight(p.x, p.y), p.y), u, v });
         }
         grid.push(row);
       }
 
-      // Masque des cellules actives appartenant aux parcelles 285, 286, 93 & Avenue de V
-      const active = Array.from({ length: NV }, (_, iv) =>
+      // État exact de chaque cellule (0 = hors parcelle, 1 = pleine, 2 = demi-cellule diagonale pan coupé)
+      const cellState = Array.from({ length: NV }, (_, iv) =>
         Array.from({ length: NU }, (_, iu) => {
-          const uc = THREE.MathUtils.lerp(U_MIN, U_MAX, (iu + 0.5) / NU);
-          const vc = THREE.MathUtils.lerp(V_MIN, V_MAX, (iv + 0.5) / NV);
-          return isInsideParcelUV(uc, vc);
+          const uc = (uCoords[iu] + uCoords[iu + 1]) * 0.5;
+          const vc = (vCoords[iv] + vCoords[iv + 1]) * 0.5;
+          return getCellState(uc, vc);
         })
       );
 
       const pos = [], norm = [], col = [], gravelMask = [];
-      const cGrass1      = new THREE.Color(0x527a37);
-      const cGrass2      = new THREE.Color(0x3f642a);
+      const cGrass1      = new THREE.Color(0x769427);
+      const cGrass2      = new THREE.Color(0x55711a);
       const cDarkGravel  = new THREE.Color(0x42474e);
       const cWhitePebble = new THREE.Color(0xe4dfd3);
       const cRoad        = new THREE.Color(0x3b4048);
@@ -2641,8 +2770,8 @@
           return { color: cRoad, gravel: 0.0 };
         }
 
-        // 2. Longue allée en cailloux (parcelles 286 & 93) — même gravier concassé
-        if (u > 14.35) {
+        // 2. Longue allée en cailloux (parcelles 286 & 93) — alignée sur les grillages jusqu'à la route
+        if (u >= 14.29) {
           return { color: cDarkGravel, gravel: 1.0 };
         }
 
@@ -2686,6 +2815,7 @@
       const dirNegU = new THREE.Vector3(-SQRT1_2, 0, -SQRT1_2);
       const dirPosV = new THREE.Vector3(-SQRT1_2, 0,  SQRT1_2);
       const dirNegV = new THREE.Vector3( SQRT1_2, 0, -SQRT1_2);
+      const dirDiagOut = new THREE.Vector3(1, 0, 0);
 
       const addSkirtQuad = (t0, t1, outDir) => {
         const b0 = new THREE.Vector3(t0.x, BASE_Y, t0.z);
@@ -2694,10 +2824,11 @@
         pushTri(b0, t1, t0, outDir, cSkirt, cSkirt, cSkirt);
       };
 
-      // Construction étanche (dessus + dessous à BASE_Y + jupes uniquement sur les bords libres)
+      // Construction étanche alignée exactement sur les grillages (dessus + dessous à BASE_Y + jupes périphériques)
       for (let iv = 0; iv < NV; iv++) {
         for (let iu = 0; iu < NU; iu++) {
-          if (!active[iv][iu]) continue;
+          const st = cellState[iv][iu];
+          if (st === 0) continue;
 
           const n00 = grid[iv][iu];
           const n10 = grid[iv][iu + 1];
@@ -2709,23 +2840,34 @@
           const s11 = pointSurfaceInfo(n11.pos.x, n11.pos.z, n11.u, n11.v);
           const s01 = pointSurfaceInfo(n01.pos.x, n01.pos.z, n01.u, n01.v);
 
-          // Face supérieure
-          pushTri(n00.pos, n01.pos, n11.pos, up, s00.color, s01.color, s11.color, s00.gravel, s01.gravel, s11.gravel);
-          pushTri(n00.pos, n11.pos, n10.pos, up, s00.color, s11.color, s10.color, s00.gravel, s11.gravel, s10.gravel);
-
-          // Face inférieure fermée à BASE_Y
           const b00 = new THREE.Vector3(n00.pos.x, BASE_Y, n00.pos.z);
           const b10 = new THREE.Vector3(n10.pos.x, BASE_Y, n10.pos.z);
           const b11 = new THREE.Vector3(n11.pos.x, BASE_Y, n11.pos.z);
           const b01 = new THREE.Vector3(n01.pos.x, BASE_Y, n01.pos.z);
+
+          if (st === 2) {
+            // Demi-cellule diagonale suivant exactement le grillage du pan coupé (n00 -> n11)
+            pushTri(n00.pos, n01.pos, n11.pos, up, s00.color, s01.color, s11.color, s00.gravel, s01.gravel, s11.gravel);
+            pushTri(b00, b11, b01, down, cSkirt, cSkirt, cSkirt);
+            addSkirtQuad(n00.pos, n11.pos, dirDiagOut);
+            if (iu === 0 || cellState[iv][iu - 1] !== 1) addSkirtQuad(n01.pos, n00.pos, dirNegU);
+            if (iv === NV - 1 || cellState[iv + 1][iu] !== 1) addSkirtQuad(n11.pos, n01.pos, dirPosV);
+            continue;
+          }
+
+          // Face supérieure (cellule pleine)
+          pushTri(n00.pos, n01.pos, n11.pos, up, s00.color, s01.color, s11.color, s00.gravel, s01.gravel, s11.gravel);
+          pushTri(n00.pos, n11.pos, n10.pos, up, s00.color, s11.color, s10.color, s00.gravel, s11.gravel, s10.gravel);
+
+          // Face inférieure fermée à BASE_Y
           pushTri(b00, b11, b01, down, cSkirt, cSkirt, cSkirt);
           pushTri(b00, b10, b11, down, cSkirt, cSkirt, cSkirt);
 
-          // Jupes verticales sur les arêtes périphériques de l'emprise cadastrale
-          if (iv === 0 || !active[iv - 1][iu])      addSkirtQuad(n00.pos, n10.pos, dirNegV);
-          if (iv === NV - 1 || !active[iv + 1][iu]) addSkirtQuad(n11.pos, n01.pos, dirPosV);
-          if (iu === 0 || !active[iv][iu - 1])      addSkirtQuad(n01.pos, n00.pos, dirNegU);
-          if (iu === NU - 1 || !active[iv][iu + 1]) addSkirtQuad(n10.pos, n11.pos, dirPosU);
+          // Jupes verticales sur les arêtes périphériques libres
+          if (iv === 0 || cellState[iv - 1][iu] === 0)      addSkirtQuad(n00.pos, n10.pos, dirNegV);
+          if (iv === NV - 1 || cellState[iv + 1][iu] !== 1) addSkirtQuad(n11.pos, n01.pos, dirPosV);
+          if (iu === 0 || cellState[iv][iu - 1] !== 1)      addSkirtQuad(n01.pos, n00.pos, dirNegU);
+          if (iu === NU - 1 || cellState[iv][iu + 1] === 0) addSkirtQuad(n10.pos, n11.pos, dirPosU);
         }
       }
 
@@ -2743,6 +2885,8 @@
       terrainMat.onBeforeCompile = (shader) => {
         shader.uniforms.uGravelMap     = { value: sharedGravelTex };
         shader.uniforms.uGravelUvScale = { value: GRAVEL_UV_SCALE };
+        shader.uniforms.uGrassMap      = { value: sharedGrassTex };
+        shader.uniforms.uGrassUvScale  = { value: GRASS_UV_SCALE };
         shader.uniforms.uGrass1        = { value: cGrass1 };
         shader.uniforms.uGrass2        = { value: cGrass2 };
         shader.uniforms.uRoad          = { value: cRoad };
@@ -2752,29 +2896,34 @@
             '#include <common>',
             `#include <common>
             uniform float uGravelUvScale;
+            uniform float uGrassUvScale;
             varying vec3 vPlanPos;
             varying float vTopFace;
-            varying vec2 vGravelUv;`
+            varying vec2 vGravelUv;
+            varying vec2 vGrassUv;`
           )
           .replace(
             '#include <begin_vertex>',
             `#include <begin_vertex>
             vPlanPos = position;
             vTopFace = normal.y;
-            vGravelUv = vec2(position.x * uGravelUvScale, -position.z * uGravelUvScale);`
+            vGravelUv = vec2(position.x * uGravelUvScale, -position.z * uGravelUvScale);
+            vGrassUv  = vec2(position.x * uGrassUvScale,  -position.z * uGrassUvScale);`
           );
         shader.fragmentShader = shader.fragmentShader
           .replace(
             '#include <common>',
             `#include <common>
             uniform sampler2D uGravelMap;
+            uniform sampler2D uGrassMap;
             uniform vec3 uGrass1;
             uniform vec3 uGrass2;
             uniform vec3 uRoad;
             uniform vec3 uRoadMark;
             varying vec3 vPlanPos;
             varying float vTopFace;
-            varying vec2 vGravelUv;`
+            varying vec2 vGravelUv;
+            varying vec2 vGrassUv;`
           )
           .replace(
             '#include <color_fragment>',
@@ -2787,11 +2936,20 @@
                 float isDash = (abs(u - 45.1) < 0.14 && mod(floor(v / 1.8), 2.0) < 0.5) ? 1.0 : 0.0;
                 diffuseColor.rgb = mix(uRoad, uRoadMark, isDash);
               } else {
-                float nGrass = sin(vPlanPos.x * 0.32) * cos(vPlanPos.z * 0.32) * 0.5 + 0.5;
-                vec3 grassCol = mix(uGrass2, uGrass1, nGrass);
+                // Double échantillonnage pivoté de la texture gazon pour casser toute répétition visible
+                vec3 grassFine = texture2D(uGrassMap, vGrassUv).rgb;
+                vec2 uvGrassAlt = vec2(
+                  vGrassUv.x * 0.41 + vGrassUv.y * 0.27 + 0.37,
+                 -vGrassUv.x * 0.27 + vGrassUv.y * 0.41 + 0.19
+                );
+                vec3 grassMacro = texture2D(uGrassMap, uvGrassAlt).rgb;
+                float patchTone = 0.90
+                  + 0.07 * sin(vPlanPos.x * 0.23 + vPlanPos.z * 0.17)
+                  + 0.06 * cos(vPlanPos.x * 0.11 - vPlanPos.z * 0.29);
+                vec3 grassCol = mix(grassFine, grassMacro, 0.34) * patchTone;
                 vec3 gravelTexCol = texture2D(uGravelMap, vGravelUv).rgb;
 
-                float mAlley     = smoothstep(14.33, 14.37, u);
+                float mAlley     = smoothstep(14.28, 14.32, u);
                 float mGarBack   = smoothstep(-0.37, -0.33, u) * (1.0 - smoothstep(6.83, 6.87, v));
                 float mBackStrip = (1.0 - smoothstep(0.03, 0.07, vPlanPos.z))
                                  * smoothstep(-1.02, -0.98, vPlanPos.z)
@@ -2856,7 +3014,7 @@
     addWallLineUV(-21.2, -2.8, -21.2, 23.0, 14, 0.85, 0.30, concreteWallMat, 0.12);
 
     // 2. Muret en pierres sèches côté Ouest (bas photo drone, v = 23.1) + unités extérieures PAC
-    addWallLineUV(-21.2, 23.1, 14.2, 23.1, 18, 0.65, 0.36, stoneWallMat, 0.10);
+    addWallLineUV(-21.2, 23.1, 14.3, 23.1, 18, 0.65, 0.36, stoneWallMat, 0.10);
 
     {
       const pacMat = new THREE.MeshStandardMaterial({ color: 0xe6e8eb, roughness: 0.45, metalness: 0.15 });
@@ -3148,9 +3306,10 @@
         }
       }
     }
-    addFenceLineUV(14.3, -2.8, 14.3, 15.0, 7);  // Pignon garage -> angle parcelle 284
-    addFenceLineUV(14.3, 15.0, 15.9, 16.6, 1);  // Pan coupé clôture angle 284
-    addFenceLineUV(15.9, 16.6, 42.6, 16.6, 11); // Longueur allée parcelles 286 & 93
+    addFenceLineUV(14.3, -2.8, 14.3, 15.0, 7);   // Pignon garage -> angle parcelle 284
+    addFenceLineUV(14.3, 15.0, 15.9, 16.6, 1);   // Pan coupé clôture angle 284
+    addFenceLineUV(15.9, 16.6, 43.2, 16.6, 12);  // Longueur allée parcelles 286 & 93 jusqu'à la route (côté Est)
+    addFenceLineUV(14.3, 23.1, 43.2, 23.1, 12);  // Même grillage de l'autre côté de l'allée jusqu'à la route (côté Ouest)
 
     // 7. Végétation réaliste : grand cèdre côté Est + petits arbustes dans les massifs galets
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x614734, roughness: 0.92 });
