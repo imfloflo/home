@@ -218,7 +218,7 @@
             <span class="toggle-switch"></span>
           </label>
           <label class="flex items-center justify-between cursor-pointer text-xs text-slate-200 font-medium">
-            <span>Mobilier &amp; Voiture</span>
+            <span>Mobilier &amp; Voitures (Tesla)</span>
             <input type="checkbox" id="toggle-furniture" class="toggle-input sr-only" checked />
             <span class="toggle-switch"></span>
           </label>
@@ -507,6 +507,7 @@
 
     // Lumières intérieures chaudes & éclairage extérieur patio/terrasse (coordonnées plan)
     const warmLights = [];
+    const carNightGlowMats = [];
     [
       [5.4, 2.2, 6.6],   // Pièces de vie
       [11.8, 2.2, 6.5],  // Entrée / Couloir
@@ -549,6 +550,7 @@
         fillLight.intensity = 0.45;
         renderer.toneMappingExposure = 1.06;
         warmLights.forEach(l => { l.intensity = 0; });
+        carNightGlowMats.forEach(item => { item.mat.emissiveIntensity = item.day; });
       } else {
         skyUniforms.topColor.value.setHex(0x030714);
         skyUniforms.bottomColor.value.setHex(0x0f1c36);
@@ -567,6 +569,7 @@
         warmLights.forEach((l, idx) => {
           l.intensity = idx === 2 ? 5.2 : (idx === 5 ? 3.2 : 4.0);
         });
+        carNightGlowMats.forEach(item => { item.mat.emissiveIntensity = item.night; });
       }
     }
 
@@ -1822,28 +1825,619 @@
     addFurnBox(1.65, 0.42, 0.70, 0.80, 0.19, 10.05, mFabric, -0.78);
     addFurnBox(0.90, 0.32, 0.55, 1.52, 0.14, 10.70, mWood, -0.78);
 
-    // Véhicule stylisé garé dans la cour (comme sur les photos drone) + 1 véhicule dans le garage
-    function addStylizedCar(x, y, z, rotY, bodyHex) {
+    // =========================================================================
+    // VÉHICULES TESLA DÉTAILLÉS :
+    // 1) 2026 Tesla Model Y Performance (Juniper) — Rouge Ultra Red / Intérieur Blanc (dans le garage)
+    // 2) 2024 Tesla Model 3 (Highland) — Blanc Nacré / Intérieur Noir (devant le garage)
+    // =========================================================================
+    function createTeslaVehicle(cfg) {
       const car = new THREE.Group();
-      car.position.set(x, y, z);
-      car.rotation.y = rotY;
-      const cMat = new THREE.MeshStandardMaterial({ color: bodyHex, roughness: 0.32, metalness: 0.45 });
-      const lower = new THREE.Mesh(new THREE.BoxGeometry(1.80, 0.60, 4.25), cMat);
-      lower.position.y = 0.48;
-      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.54, 0.54, 2.20), cMat);
-      cabin.position.set(0, 1.00, -0.15);
-      const wMat = new THREE.MeshStandardMaterial({ color: 0x1e2228, roughness: 0.9 });
-      [[-0.85, 1.28], [0.85, 1.28], [-0.85, -1.28], [0.85, -1.28]].forEach(([wx, wz]) => {
-        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.21, 14), wMat);
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(wx, 0.31, wz);
-        car.add(wheel);
+      const isY = cfg.model === 'modelYPerf2026';
+
+      const halfL = cfg.length * 0.5;
+      const halfW = cfg.width * 0.5;
+      const wheelR = cfg.wheelRadius;
+      const wheelW = cfg.wheelWidth;
+      const zFront = cfg.wheelbase * 0.5;
+      const zRear  = -cfg.wheelbase * 0.5;
+      const beltY  = isY ? 1.00 : 0.88;
+      const roofY  = cfg.height;
+
+      // Matériaux carrosserie, habitacle, vitrages, carbone & éclairages LED
+      const paintMat = new THREE.MeshPhysicalMaterial({
+        color: cfg.bodyColor,
+        metalness: isY ? 0.58 : 0.16,
+        roughness: isY ? 0.22 : 0.20,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.07
       });
-      [lower, cabin].forEach(o => { o.castShadow = true; o.receiveShadow = true; car.add(o); });
-      furnitureGroup.add(car);
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0x16191e, roughness: 0.58, metalness: 0.22 });
+      const carbonMat = new THREE.MeshStandardMaterial({ color: 0x1e2228, roughness: 0.34, metalness: 0.42 });
+      const chromeDarkMat = new THREE.MeshStandardMaterial({ color: 0x2a2f38, roughness: 0.28, metalness: 0.78 });
+      const tireMat = new THREE.MeshStandardMaterial({ color: 0x171a1f, roughness: 0.90, metalness: 0.04 });
+      const rimMat = new THREE.MeshStandardMaterial({
+        color: isY ? 0x252a32 : 0x525a66,
+        roughness: 0.30,
+        metalness: 0.78
+      });
+      const rotorMat = new THREE.MeshStandardMaterial({ color: 0xaeb6c0, roughness: 0.35, metalness: 0.82 });
+      const caliperMat = new THREE.MeshStandardMaterial({
+        color: cfg.caliperColor,
+        roughness: 0.30,
+        metalness: 0.35
+      });
+
+      const seatMat = new THREE.MeshStandardMaterial({
+        color: cfg.interiorWhite ? 0xf6f6f3 : 0x1e2229,
+        roughness: cfg.interiorWhite ? 0.52 : 0.72,
+        metalness: 0.02
+      });
+      const dashTopMat = new THREE.MeshStandardMaterial({ color: 0x1b1f26, roughness: 0.78 });
+      const dashAccentMat = new THREE.MeshStandardMaterial({
+        color: cfg.interiorWhite ? 0xf8f8f5 : 0x2d323b,
+        roughness: 0.48
+      });
+      const carpetMat = new THREE.MeshStandardMaterial({ color: 0x181b20, roughness: 0.95 });
+      const screenMat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        emissive: 0x60a5fa,
+        emissiveIntensity: 0.45,
+        roughness: 0.15
+      });
+
+      const glassWindMat = new THREE.MeshPhysicalMaterial({
+        color: 0x182633,
+        transparent: true,
+        opacity: cfg.interiorWhite ? 0.30 : 0.40,
+        roughness: 0.06,
+        metalness: 0.18,
+        clearcoat: 1.0,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+      const glassRoofMat = new THREE.MeshPhysicalMaterial({
+        color: 0x101a24,
+        transparent: true,
+        opacity: cfg.interiorWhite ? 0.40 : 0.56,
+        roughness: 0.05,
+        metalness: 0.25,
+        clearcoat: 1.0,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+
+      const drlMat = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        emissive: 0xeef6ff,
+        emissiveIntensity: 0.85,
+        roughness: 0.15
+      });
+      const tailMat = new THREE.MeshStandardMaterial({
+        color: 0xb91c1c,
+        emissive: 0xef233c,
+        emissiveIntensity: 0.75,
+        roughness: 0.22
+      });
+      carNightGlowMats.push(
+        { mat: drlMat,  day: 0.85, night: 3.4 },
+        { mat: tailMat, day: 0.75, night: 2.8 }
+      );
+
+      // Helper : extrude un profil latéral (sx = longueur Z, sy = hauteur Y) centré en X
+      function addProfileExtrusion(pts2D, width, bevel, material, xCenter = 0) {
+        const sh = new THREE.Shape();
+        sh.moveTo(pts2D[0][0], pts2D[0][1]);
+        for (let i = 1; i < pts2D.length; i++) sh.lineTo(pts2D[i][0], pts2D[i][1]);
+        sh.closePath();
+        const depth = Math.max(0.02, width - bevel * 2);
+        const g = new THREE.ExtrudeGeometry(sh, {
+          depth,
+          bevelEnabled: bevel > 0,
+          bevelThickness: bevel,
+          bevelSize: bevel,
+          bevelSegments: 4,
+          curveSegments: 12
+        });
+        g.translate(0, 0, -depth * 0.5);
+        g.rotateY(-Math.PI / 2); // sx -> +Z (avant), sz -> -X (largeur)
+        const mesh = new THREE.Mesh(g, material);
+        mesh.position.x = xCenter;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        car.add(mesh);
+        return mesh;
+      }
+
+      // 1. Plancher châssis + bas de caisse aérodynamique
+      const chassisH = 0.14;
+      const chassisY = isY ? 0.21 : 0.15;
+      const floorMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(cfg.width - 0.16, chassisH, cfg.length - 0.26),
+        trimMat
+      );
+      floorMesh.position.set(0, chassisY + chassisH * 0.5, 0);
+      floorMesh.castShadow = true;
+      floorMesh.receiveShadow = true;
+      car.add(floorMesh);
+
+      // 2. Capot & museau avant sculpté (de la base du pare-brise jusqu'au bouclier avant)
+      if (isY) {
+        // Model Y Juniper 2026 : nez tendu et dynamique avec bandeau LED horizontal
+        addProfileExtrusion([
+          [ 0.78, 0.26],
+          [ 2.26, 0.26],
+          [ 2.38, 0.34],
+          [ 2.39, 0.62],
+          [ 2.34, 0.77],
+          [ 2.02, 0.87],
+          [ 1.38, 0.96],
+          [ 0.78, 1.00]
+        ], cfg.width - 0.06, 0.085, paintMat);
+
+        // Lame avant Performance noire mate & entrées d'air
+        const splitter = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.12, 0.055, 0.34), carbonMat);
+        splitter.position.set(0, 0.225, halfL - 0.12);
+        car.add(splitter);
+        const lowerIntake = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.13, 0.06), trimMat);
+        lowerIntake.position.set(0, 0.33, halfL - 0.01);
+        car.add(lowerIntake);
+      } else {
+        // Model 3 Highland 2024 : capot plus bas, nez effilé aérodynamique
+        addProfileExtrusion([
+          [ 0.74, 0.20],
+          [ 2.24, 0.20],
+          [ 2.35, 0.29],
+          [ 2.36, 0.53],
+          [ 2.28, 0.67],
+          [ 1.94, 0.77],
+          [ 1.32, 0.84],
+          [ 0.74, 0.88]
+        ], cfg.width - 0.06, 0.08, paintMat);
+
+        const lowerGrille = new THREE.Mesh(new THREE.BoxGeometry(1.06, 0.10, 0.05), trimMat);
+        lowerGrille.position.set(0, 0.26, halfL - 0.01);
+        car.add(lowerGrille);
+      }
+
+      // 3. Poupe / coffre arrière (derrière la banquette arrière jusqu'au bouclier)
+      if (isY) {
+        addProfileExtrusion([
+          [-2.38, 0.34],
+          [-2.35, 0.86],
+          [-2.30, 1.06],
+          [-1.88, 1.11],
+          [-1.12, 1.06],
+          [-1.12, 0.28],
+          [-2.20, 0.28]
+        ], cfg.width - 0.06, 0.085, paintMat);
+
+        // Diffuseur arrière sportif Performance + ailettes verticales
+        const rearDiff = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.16, 0.17, 0.20), trimMat);
+        rearDiff.position.set(0, 0.29, -halfL + 0.11);
+        car.add(rearDiff);
+        for (let k = -2; k <= 2; k++) {
+          const fin = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.12, 0.12), carbonMat);
+          fin.position.set(k * 0.26, 0.25, -halfL + 0.04);
+          car.add(fin);
+        }
+
+        // Aileron becquet arrière carbone Performance
+        const spoiler = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.032, 0.14), carbonMat);
+        spoiler.position.set(0, 1.145, -2.29);
+        spoiler.rotation.x = 0.18;
+        spoiler.castShadow = true;
+        car.add(spoiler);
+      } else {
+        addProfileExtrusion([
+          [-2.34, 0.26],
+          [-2.32, 0.76],
+          [-2.26, 0.94],
+          [-1.82, 0.96],
+          [-1.10, 0.92],
+          [-1.10, 0.22],
+          [-2.16, 0.22]
+        ], cfg.width - 0.06, 0.08, paintMat);
+
+        const rearValence = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.20, 0.14, 0.16), trimMat);
+        rearValence.position.set(0, 0.24, -halfL + 0.10);
+        car.add(rearValence);
+      }
+
+      // 4. Flancs / Portières gauche & droite (laissant l'habitacle creux au centre pour voir l'intérieur !)
+      const doorPts = isY
+        ? [[-1.18, 0.26], [0.86, 0.26], [0.86, 1.00], [-1.18, 1.06]]
+        : [[-1.16, 0.20], [0.82, 0.20], [0.82, 0.88], [-1.16, 0.92]];
+      addProfileExtrusion(doorPts, 0.15, 0.045, paintMat,  halfW - 0.09);
+      addProfileExtrusion(doorPts, 0.15, 0.045, paintMat, -halfW + 0.09);
+
+      // Passages de roues sombres (intérieur d'ailes) & élargisseurs noirs sur Model Y
+      [zFront, zRear].forEach(zAxle => {
+        const well = new THREE.Mesh(
+          new THREE.BoxGeometry(cfg.width - 0.08, wheelR * 1.35, wheelR * 2.10),
+          trimMat
+        );
+        well.position.set(0, wheelR * 0.96, zAxle);
+        car.add(well);
+
+        if (isY) {
+          [-1, 1].forEach(side => {
+            const arch = new THREE.Mesh(
+              new THREE.TorusGeometry(wheelR + 0.045, 0.032, 8, 22, Math.PI),
+              trimMat
+            );
+            arch.rotation.y = Math.PI / 2;
+            arch.position.set(side * (halfW - 0.015), wheelR + 0.02, zAxle);
+            car.add(arch);
+          });
+        }
+      });
+
+      // 5. Arches de toit & verrière panoramique fastback (courbe fluide CatmullRom)
+      const roofProfilePts = isY
+        ? [
+            new THREE.Vector2( 1.08, 0.99), // Base pare-brise
+            new THREE.Vector2( 0.42, 1.48), // Haut pare-brise
+            new THREE.Vector2(-0.22, 1.61), // Sommet toit SUV
+            new THREE.Vector2(-0.98, 1.54), // Descente fastback
+            new THREE.Vector2(-1.68, 1.32), // Hayon vitré
+            new THREE.Vector2(-2.22, 1.11)  // Arrête coffre
+          ]
+        : [
+            new THREE.Vector2( 1.04, 0.87), // Base pare-brise Highland
+            new THREE.Vector2( 0.34, 1.33), // Haut pare-brise
+            new THREE.Vector2(-0.25, 1.43), // Sommet toit berline
+            new THREE.Vector2(-0.96, 1.35), // Descente fastback
+            new THREE.Vector2(-1.58, 1.13), // Lunette arrière
+            new THREE.Vector2(-2.06, 0.95)  // Arrête coffre
+          ];
+
+      const halfRoofAt = (t) => {
+        const baseW = halfW - 0.14;
+        const topW  = halfW - (isY ? 0.30 : 0.28);
+        return THREE.MathUtils.lerp(baseW, topW, Math.sin(t * Math.PI));
+      };
+
+      const leftRailPts = [];
+      const rightRailPts = [];
+      const curve2D = new THREE.SplineCurve(roofProfilePts);
+      const roofSamples = 20;
+      for (let i = 0; i <= roofSamples; i++) {
+        const t = i / roofSamples;
+        const p2 = curve2D.getPoint(t);
+        const xR = halfRoofAt(t);
+        leftRailPts.push(new THREE.Vector3( xR, p2.y, p2.x));
+        rightRailPts.push(new THREE.Vector3(-xR, p2.y, p2.x));
+      }
+
+      // Montants latéraux peints couleur carrosserie (arches A -> C)
+      [leftRailPts, rightRailPts].forEach(pts => {
+        const railCurve = new THREE.CatmullRomCurve3(pts);
+        const railMesh = new THREE.Mesh(
+          new THREE.TubeGeometry(railCurve, 24, isY ? 0.044 : 0.038, 8, false),
+          paintMat
+        );
+        railMesh.castShadow = true;
+        car.add(railMesh);
+      });
+
+      // Verrière continue (pare-brise + toit panoramique + lunette arrière)
+      {
+        const gPos = [], gIdx = [];
+        for (let i = 0; i <= roofSamples; i++) {
+          const l = leftRailPts[i];
+          const r = rightRailPts[i];
+          gPos.push(l.x * 0.97, l.y - 0.006, l.z);
+          gPos.push(r.x * 0.97, r.y - 0.006, r.z);
+          if (i < roofSamples) {
+            const b = i * 2;
+            gIdx.push(b, b + 1, b + 3, b, b + 3, b + 2);
+          }
+        }
+        const canopyGeom = new THREE.BufferGeometry();
+        canopyGeom.setAttribute('position', new THREE.Float32BufferAttribute(gPos, 3));
+        canopyGeom.setIndex(gIdx);
+        canopyGeom.computeVertexNormals();
+        const canopyMesh = new THREE.Mesh(canopyGeom, glassRoofMat);
+        car.add(canopyMesh);
+      }
+
+      // Vitres latérales + montants B noir brillant
+      [-1, 1].forEach(side => {
+        const wPos = [], wIdx = [];
+        const startI = 2, endI = roofSamples - 2;
+        for (let i = startI; i <= endI; i++) {
+          const t = i / roofSamples;
+          const pTop = curve2D.getPoint(t);
+          const xTop = side * (halfRoofAt(t) - 0.01);
+          const xBot = side * (halfW - 0.10);
+          const yBot = THREE.MathUtils.lerp(beltY, beltY + 0.05, t);
+          wPos.push(xBot, yBot, pTop.x);
+          wPos.push(xTop, pTop.y - 0.02, pTop.x);
+          if (i < endI) {
+            const k = (i - startI) * 2;
+            wIdx.push(k, k + 1, k + 3, k, k + 3, k + 2);
+          }
+        }
+        const sideWinGeom = new THREE.BufferGeometry();
+        sideWinGeom.setAttribute('position', new THREE.Float32BufferAttribute(wPos, 3));
+        sideWinGeom.setIndex(wIdx);
+        sideWinGeom.computeVertexNormals();
+        car.add(new THREE.Mesh(sideWinGeom, glassWindMat));
+
+        // Montant B vertical noir brillant
+        const bPillar = new THREE.Mesh(new THREE.BoxGeometry(0.03, roofY - beltY - 0.04, 0.11), trimMat);
+        bPillar.position.set(side * (halfW - 0.19), (beltY + roofY) * 0.5 - 0.01, -0.14);
+        bPillar.rotation.z = side * 0.24;
+        car.add(bPillar);
+      });
+
+      // 6. INTÉRIEUR DÉTAILLÉ (BLANC SUR MODEL Y PERFORMANCE / NOIR SUR MODEL 3)
+      const cabFloorY = chassisY + chassisH;
+      const carpet = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.34, 0.03, 2.02), carpetMat);
+      carpet.position.set(0, cabFloorY + 0.015, -0.10);
+      car.add(carpet);
+
+      // Planche de bord + bandeau décoratif blanc (Model Y) ou sombre (Model 3)
+      const dashY = beltY - 0.08;
+      const dash = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.34, 0.24, 0.42), dashTopMat);
+      dash.position.set(0, dashY, 0.72);
+      car.add(dash);
+
+      const dashStrip = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.32, 0.075, 0.38), dashAccentMat);
+      dashStrip.position.set(0, dashY + 0.06, 0.69);
+      car.add(dashStrip);
+
+      // Écran central flottant 15,4"
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.22, 0.025), screenMat);
+      screen.position.set(0, dashY + 0.12, 0.52);
+      screen.rotation.x = -0.14;
+      car.add(screen);
+
+      // Volant côté conducteur (gauche = +X)
+      const wheelRing = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.022, 8, 20), trimMat);
+      wheelRing.position.set(0.38, dashY + 0.08, 0.44);
+      wheelRing.rotation.x = 0.35;
+      car.add(wheelRing);
+
+      // Console centrale + accoudoir (blanc sur Model Y)
+      const consoleBox = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 1.05), dashTopMat);
+      consoleBox.position.set(0, cabFloorY + 0.20, 0.06);
+      car.add(consoleBox);
+      const armrest = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.055, 0.48), seatMat);
+      armrest.position.set(0, cabFloorY + 0.35, -0.18);
+      car.add(armrest);
+
+      // Sièges avant sport (conducteur + passager)
+      [-0.39, 0.39].forEach(sx => {
+        const seatGrp = new THREE.Group();
+        seatGrp.position.set(sx, cabFloorY + 0.12, 0.02);
+        const cushion = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.12, 0.50), seatMat);
+        cushion.position.set(0, 0.06, 0.05);
+        const backrest = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.58, 0.12), seatMat);
+        backrest.position.set(0, 0.36, -0.20);
+        backrest.rotation.x = -0.22;
+        const headrest = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.19, 0.10), seatMat);
+        headrest.position.set(0, 0.70, -0.28);
+        headrest.rotation.x = -0.14;
+        seatGrp.add(cushion, backrest, headrest);
+        car.add(seatGrp);
+      });
+
+      // Banquette arrière 3 places + 3 appuie-têtes
+      const rearCushion = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.44, 0.14, 0.50), seatMat);
+      rearCushion.position.set(0, cabFloorY + 0.20, -0.78);
+      car.add(rearCushion);
+      const rearBack = new THREE.Mesh(new THREE.BoxGeometry(cfg.width - 0.44, 0.54, 0.13), seatMat);
+      rearBack.position.set(0, cabFloorY + 0.50, -1.03);
+      rearBack.rotation.x = -0.22;
+      car.add(rearBack);
+      [-0.44, 0, 0.44].forEach(hx => {
+        const rh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.09), seatMat);
+        rh.position.set(hx, cabFloorY + 0.80, -1.10);
+        car.add(rh);
+      });
+
+      // Bandeaux supérieurs de contre-portes intérieurs (très visibles en blanc)
+      [-1, 1].forEach(side => {
+        const card = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 1.75), dashAccentMat);
+        card.position.set(side * (halfW - 0.19), beltY - 0.08, -0.12);
+        car.add(card);
+      });
+
+      // 7. SIGNATURES LUMINEUSES SPÉCIFIQUES (JUNIPER 2026 vs HIGHLAND 2024)
+      if (isY) {
+        // Bandeau LED avant continu pleine largeur (2026 Juniper)
+        const frontBarHousing = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.058, 0.04), trimMat);
+        frontBarHousing.position.set(0, 0.74, halfL - 0.02);
+        car.add(frontBarHousing);
+        const frontBar = new THREE.Mesh(new THREE.BoxGeometry(1.60, 0.032, 0.03), drlMat);
+        frontBar.position.set(0, 0.74, halfL - 0.005);
+        car.add(frontBar);
+
+        // Projecteurs principaux inférieurs intégrés dans le bouclier
+        [-0.64, 0.64].forEach(px => {
+          const pod = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.075, 0.05), trimMat);
+          pod.position.set(px, 0.54, halfL - 0.025);
+          pod.rotation.y = px > 0 ? 0.20 : -0.20;
+          car.add(pod);
+          const lens = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.03), drlMat);
+          lens.position.set(px, 0.54, halfL - 0.005);
+          lens.rotation.y = px > 0 ? 0.20 : -0.20;
+          car.add(lens);
+        });
+
+        // Bandeau LED arrière rouge indirect pleine largeur (signature Juniper)
+        const rearTrough = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.11, 0.05), trimMat);
+        rearTrough.position.set(0, 0.96, -halfL + 0.03);
+        car.add(rearTrough);
+        const rearLightBar = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.052, 0.035), tailMat);
+        rearLightBar.position.set(0, 0.965, -halfL + 0.012);
+        car.add(rearLightBar);
+      } else {
+        // Phares avant ultra-fins effilés (2024 Model 3 Highland — sans bandeau central)
+        [-1, 1].forEach(side => {
+          const hlHousing = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.068, 0.12), trimMat);
+          hlHousing.position.set(side * 0.62, 0.65, halfL - 0.07);
+          hlHousing.rotation.y = side * 0.30;
+          hlHousing.rotation.z = -side * 0.08;
+          car.add(hlHousing);
+
+          const hlDrl = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.028, 0.04), drlMat);
+          hlDrl.position.set(side * 0.62, 0.655, halfL - 0.015);
+          hlDrl.rotation.y = side * 0.30;
+          hlDrl.rotation.z = -side * 0.08;
+          car.add(hlDrl);
+
+          // Feux arrière en "C" affinés (Highland)
+          const tailGrp = new THREE.Group();
+          tailGrp.position.set(side * 0.64, 0.84, -halfL + 0.02);
+          tailGrp.rotation.y = -side * 0.20;
+          const tTop = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.032, 0.03), tailMat);
+          tTop.position.set(0, 0.055, 0);
+          const tBot = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.030, 0.03), tailMat);
+          tBot.position.set(side * 0.02, -0.055, 0);
+          const tOut = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.14, 0.03), tailMat);
+          tOut.position.set(side * 0.15, 0, 0);
+          tailGrp.add(tTop, tBot, tOut);
+          car.add(tailGrp);
+        });
+      }
+
+      // Plaques d'immatriculation FR stylisées
+      const plateMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+      const frontPlate = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.10, 0.015), plateMat);
+      frontPlate.position.set(0, isY ? 0.44 : 0.38, halfL + 0.006);
+      const rearPlate = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.10, 0.015), plateMat);
+      rearPlate.position.set(0, isY ? 0.58 : 0.62, -halfL - 0.002);
+      car.add(frontPlate, rearPlate);
+
+      // Rétroviseurs aérodynamiques & poignées affleurantes noires
+      [-1, 1].forEach(side => {
+        const stem = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.032, 0.05), trimMat);
+        stem.position.set(side * (halfW + 0.02), beltY + 0.04, 0.56);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.085, 0.11), paintMat);
+        cap.position.set(side * (halfW + 0.09), beltY + 0.06, 0.54);
+        cap.castShadow = true;
+        car.add(stem, cap);
+
+        // Poignées de portes avant et arrière affleurantes noir satin
+        [0.18, -0.62].forEach(hz => {
+          const handle = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.028, 0.15), trimMat);
+          handle.position.set(side * (halfW - 0.008), beltY - 0.07, hz);
+          car.add(handle);
+        });
+      });
+
+      // 8. 4 ROUES DÉTAILLÉES (JANTES PERFORMANCE / AERO + DISQUES + ÉTRIERS)
+      const spokeCount = isY ? 10 : 7;
+      [
+        [ halfW - wheelW * 0.44, zFront,  1],
+        [-halfW + wheelW * 0.44, zFront, -1],
+        [ halfW - wheelW * 0.44, zRear,   1],
+        [-halfW + wheelW * 0.44, zRear,  -1]
+      ].forEach(([wx, wz, side]) => {
+        const wGrp = new THREE.Group();
+        wGrp.position.set(wx, wheelR, wz);
+
+        // Pneu large
+        const tire = new THREE.Mesh(new THREE.CylinderGeometry(wheelR, wheelR, wheelW, 28), tireMat);
+        tire.rotation.z = Math.PI / 2;
+        tire.castShadow = true;
+        tire.receiveShadow = true;
+        wGrp.add(tire);
+
+        // Jante alliage
+        const rimR = wheelR * (isY ? 0.74 : 0.68);
+        const rimOuter = new THREE.Mesh(new THREE.CylinderGeometry(rimR, rimR, wheelW + 0.008, 24), rimMat);
+        rimOuter.rotation.z = Math.PI / 2;
+        wGrp.add(rimOuter);
+
+        // Disque de frein ventilé + étrier (rouge Performance sur Model Y)
+        const rotor = new THREE.Mesh(new THREE.CylinderGeometry(rimR * 0.78, rimR * 0.78, 0.03, 20), rotorMat);
+        rotor.rotation.z = Math.PI / 2;
+        rotor.position.x = side * (wheelW * 0.24);
+        wGrp.add(rotor);
+
+        const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.055, rimR * 0.48, rimR * 0.28), caliperMat);
+        caliper.position.set(side * (wheelW * 0.29), rimR * 0.12, wz > 0 ? -rimR * 0.46 : rimR * 0.46);
+        wGrp.add(caliper);
+
+        // Rayons de jante en relief
+        for (let s = 0; s < spokeCount; s++) {
+          const a = (s / spokeCount) * Math.PI * 2;
+          const spoke = new THREE.Mesh(
+            new THREE.BoxGeometry(0.022, rimR * 0.90, isY ? 0.028 : 0.044),
+            isY ? chromeDarkMat : rotorMat
+          );
+          spoke.position.set(
+            side * (wheelW * 0.46),
+            Math.cos(a) * rimR * 0.45,
+            Math.sin(a) * rimR * 0.45
+          );
+          spoke.rotation.x = a + (isY ? 0.22 : 0.0);
+          wGrp.add(spoke);
+        }
+
+        const hubCap = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.028, 14), trimMat);
+        hubCap.rotation.z = Math.PI / 2;
+        hubCap.position.x = side * (wheelW * 0.48);
+        wGrp.add(hubCap);
+
+        car.add(wGrp);
+      });
+
+      return car;
     }
-    const garCarPt = uvToPlan(7.55, 3.65);
-    addStylizedCar(garCarPt.x, 0.008, garCarPt.y, Math.PI / 4, 0x3b4d61);
+
+    // 1) 2026 Tesla Model Y Performance (Rouge Ultra Red / Intérieur Blanc) garée dans le garage
+    const teslaModelYPerf = createTeslaVehicle({
+      model: 'modelYPerf2026',
+      bodyColor: 0xb81022,     // Rouge Ultra Red métallisé
+      interiorWhite: true,     // Intérieur Blanc Tesla
+      caliperColor: 0xe11d2a,  // Étriers Performance rouges
+      length: 4.79,
+      width: 1.92,
+      height: 1.62,
+      wheelbase: 2.89,
+      wheelRadius: 0.365,
+      wheelWidth: 0.27
+    });
+    const garCarPt = uvToPlan(7.90, 3.45);
+    teslaModelYPerf.position.set(garCarPt.x, 0.008, garCarPt.y);
+    teslaModelYPerf.rotation.y = -Math.PI / 4; // Garée en marche arrière dans l'axe du garage (nez vers la porte)
+    furnitureGroup.add(teslaModelYPerf);
+
+    // 2) 2024 Tesla Model 3 Highland (Blanche Nacrée / Intérieur Noir) devant le garage dans la cour
+    const teslaModel3 = createTeslaVehicle({
+      model: 'model3Highland2024',
+      bodyColor: 0xf4f6f8,     // Blanc Nacré Multi-Coat
+      interiorWhite: false,    // Intérieur Noir
+      caliperColor: 0x6b7280,  // Étriers gris métallisé
+      length: 4.72,
+      width: 1.85,
+      height: 1.44,
+      wheelbase: 2.875,
+      wheelRadius: 0.335,
+      wheelWidth: 0.24
+    });
+    {
+      const frontCarPt = uvToPlan(10.85, 11.40);
+      const rotY = -Math.PI / 4 + 0.14; // Garée devant le garage, orientée vers la cour/allée
+      const fwdX = Math.sin(rotY),  fwdZ = Math.cos(rotY);
+      const lftX = Math.cos(rotY),  lftZ = -Math.sin(rotY);
+      const yF = getTerrainHeight(frontCarPt.x + fwdX * 1.44, frontCarPt.y + fwdZ * 1.44);
+      const yR = getTerrainHeight(frontCarPt.x - fwdX * 1.44, frontCarPt.y - fwdZ * 1.44);
+      const yL = getTerrainHeight(frontCarPt.x + lftX * 0.88, frontCarPt.y + lftZ * 0.88);
+      const yRg = getTerrainHeight(frontCarPt.x - lftX * 0.88, frontCarPt.y - lftZ * 0.88);
+      const yGround = (yF + yR + yL + yRg) * 0.25;
+      const pitch = -Math.atan2(yF - yR, 2.88);
+      const roll  =  Math.atan2(yL - yRg, 1.76);
+
+      teslaModel3.rotation.order = 'YXZ';
+      teslaModel3.rotation.set(pitch, rotY, roll);
+      teslaModel3.position.set(frontCarPt.x, yGround, frontCarPt.y);
+      furnitureGroup.add(teslaModel3);
+    }
 
     // =========================================================================
     // 11. TERRASSE 3,60 m EN DALLES 60×60 CM CONTINUE SOUS LE PATIO D'ENTRÉE
