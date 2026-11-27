@@ -99,6 +99,18 @@
       opacity: 0.4;
       cursor: not-allowed;
     }
+    body.measure-mode #canvas-container,
+    body.measure-mode canvas {
+      cursor: crosshair !important;
+    }
+    .measure-label {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      white-space: nowrap;
+      margin-top: -8px;
+      z-index: 15;
+    }
   </style>
 </head>
 <body class="text-slate-100">
@@ -263,6 +275,71 @@
                 Nuit
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3b. Outil de mesure de distances -->
+      <section class="space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6m0 0l6-6m-6 6l2 2m4-4l2 2M5 19l2-2m10-10l2-2M3 21h4l14-14-4-4L3 17v4z" />
+            </svg>
+            Mesure de distances
+          </h2>
+          <span id="measure-count-badge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            0 mesure
+          </span>
+        </div>
+
+        <div class="bg-slate-900/65 rounded-xl p-2.5 border border-slate-700/60 space-y-2.5">
+          <button
+            id="btn-measure-toggle"
+            type="button"
+            class="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-semibold text-xs py-2 px-3 transition active:scale-95"
+          >
+            <span id="measure-dot" class="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
+            <span id="measure-toggle-label">Activer l'outil de mesure</span>
+          </button>
+
+          <label class="flex items-center justify-between cursor-pointer text-[11px] text-slate-200 font-medium">
+            <span>Projeter à l'horizontale (à plat)</span>
+            <input type="checkbox" id="toggle-measure-flat" class="toggle-input sr-only" />
+            <span class="toggle-switch"></span>
+          </label>
+
+          <div class="rounded-xl bg-slate-950/75 border border-slate-700/70 px-3 py-2 space-y-1">
+            <div class="flex items-baseline justify-between gap-2">
+              <span class="text-[11px] text-slate-400">Distance :</span>
+              <span id="measure-value" class="font-mono text-sm font-bold text-sky-300">-- m</span>
+            </div>
+            <div id="measure-breakdown" class="text-[10px] font-mono text-slate-400 flex items-center justify-between">
+              <span>Horiz. --</span>
+              <span>ΔH --</span>
+            </div>
+            <p id="measure-hint" class="text-[10px] text-slate-400 leading-snug pt-1 border-t border-slate-800">
+              Activez l'outil puis cliquez 2 points sur la maquette.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <button
+              id="btn-measure-undo"
+              type="button"
+              class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 transition active:scale-95 disabled:opacity-40"
+              disabled
+            >
+              Annuler
+            </button>
+            <button
+              id="btn-measure-clear"
+              type="button"
+              class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-slate-800/80 hover:bg-rose-950/70 hover:border-rose-500/50 hover:text-rose-200 border border-slate-700 text-slate-300 transition active:scale-95 disabled:opacity-40"
+              disabled
+            >
+              Effacer tout
+            </button>
           </div>
         </div>
       </section>
@@ -4116,6 +4193,429 @@ ${itemsXML.join('\n')}
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // =========================================================================
+    // 17B. OUTIL INTERACTIF DE MESURE DE DISTANCES 3D (NON IMPRIMABLE)
+    // =========================================================================
+    const measureGroup = new THREE.Group();
+    scene.add(measureGroup);
+
+    const raycaster = new THREE.Raycaster();
+    const pointerNDC = new THREE.Vector2();
+
+    let measureActive = false;
+    let measureFlatMode = false;
+    let pendingPointA = null;
+    let pointerDownPos = null;
+    const completedMeasures = [];
+
+    // Matériaux haute visibilité pour les repères et segments de mesure
+    const mPointMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const mPointRingMat = new THREE.MeshBasicMaterial({
+      color: 0xe0f2fe,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.9
+    });
+    const mSegmentMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 });
+    const mGhostLineMat = new THREE.LineBasicMaterial({
+      color: 0x7dd3fc,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.55
+    });
+    const mPreviewLineMat = new THREE.LineBasicMaterial({
+      color: 0xfbbf24,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.95
+    });
+    const mPlumbLineMat = new THREE.LineBasicMaterial({
+      color: 0xf59e0b,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.75
+    });
+
+    function createMeasureMarker(colorHex = 0x38bdf8, radius = 0.085) {
+      const g = new THREE.Group();
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 14, 14),
+        new THREE.MeshBasicMaterial({ color: colorHex })
+      );
+      const halo = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 1.45, 12, 12),
+        new THREE.MeshBasicMaterial({
+          color: colorHex,
+          transparent: true,
+          opacity: 0.28,
+          depthTest: false
+        })
+      );
+      halo.renderOrder = 998;
+      sphere.renderOrder = 999;
+      g.add(sphere, halo);
+      return g;
+    }
+
+    // Marqueur de survol, marqueur du 1er point et ligne d'aperçu temps réel
+    const hoverMarker = createMeasureMarker(0xfbbf24, 0.075);
+    hoverMarker.visible = false;
+    measureGroup.add(hoverMarker);
+
+    const pendingMarkerA = createMeasureMarker(0x38bdf8, 0.09);
+    pendingMarkerA.visible = false;
+    measureGroup.add(pendingMarkerA);
+
+    const previewLineGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(),
+      new THREE.Vector3()
+    ]);
+    const previewLine = new THREE.Line(previewLineGeom, mPreviewLineMat);
+    previewLine.visible = false;
+    previewLine.renderOrder = 999;
+    measureGroup.add(previewLine);
+
+    const plumbLineGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(),
+      new THREE.Vector3()
+    ]);
+    const plumbLine = new THREE.Line(plumbLineGeom, mPlumbLineMat);
+    plumbLine.visible = false;
+    plumbLine.renderOrder = 998;
+    measureGroup.add(plumbLine);
+
+    const previewLabelEl = document.createElement('div');
+    previewLabelEl.className = 'measure-label bg-amber-500/95 text-slate-950 font-mono font-bold px-2 py-0.5 rounded-lg text-[11px] shadow-lg border border-amber-200/80';
+    previewLabelEl.style.display = 'none';
+    labelsLayer.appendChild(previewLabelEl);
+    let previewMidWorld = null;
+
+    const btnMeasureToggle = document.getElementById('btn-measure-toggle');
+    const measureDot = document.getElementById('measure-dot');
+    const measureToggleLabel = document.getElementById('measure-toggle-label');
+    const measureCountBadge = document.getElementById('measure-count-badge');
+    const measureValueEl = document.getElementById('measure-value');
+    const measureBreakdownEl = document.getElementById('measure-breakdown');
+    const measureHintEl = document.getElementById('measure-hint');
+    const btnMeasureUndo = document.getElementById('btn-measure-undo');
+    const btnMeasureClear = document.getElementById('btn-measure-clear');
+    const toggleMeasureFlat = document.getElementById('toggle-measure-flat');
+
+    function formatMeters(val) {
+      if (val < 1.0) return `${(val * 100).toFixed(0)} cm`;
+      return `${val.toFixed(2).replace('.', ',')} m`;
+    }
+
+    function updateMeasureReadout(pA, pB) {
+      if (!pA || !pB) {
+        measureValueEl.textContent = '-- m';
+        measureBreakdownEl.innerHTML = '<span>Horiz. --</span><span>ΔH --</span>';
+        return;
+      }
+      const dist3D = pA.distanceTo(pB);
+      const distHoriz = Math.hypot(pB.x - pA.x, pB.z - pA.z);
+      const dy = pB.y - pA.y;
+      const dySign = dy >= 0 ? '+' : '-';
+      measureValueEl.textContent = `${dist3D.toFixed(2).replace('.', ',')} m`;
+      measureBreakdownEl.innerHTML =
+        `<span>Horiz. ${distHoriz.toFixed(2).replace('.', ',')} m</span>` +
+        `<span>ΔH ${dySign}${Math.abs(dy).toFixed(2).replace('.', ',')} m</span>`;
+    }
+
+    function syncMeasureUI() {
+      const n = completedMeasures.length;
+      measureCountBadge.textContent = n > 1 ? `${n} mesures` : `${n} mesure`;
+      btnMeasureUndo.disabled = (!pendingPointA && n === 0);
+      btnMeasureClear.disabled = (!pendingPointA && n === 0);
+
+      if (measureActive) {
+        document.body.classList.add('measure-mode');
+        btnMeasureToggle.className = 'w-full flex items-center justify-center gap-2 rounded-xl bg-sky-500 hover:bg-sky-400 border border-sky-300 text-slate-950 font-bold text-xs py-2 px-3 transition active:scale-95 shadow-md';
+        measureDot.className = 'w-2 h-2 rounded-full bg-slate-950 animate-pulse shrink-0';
+        measureToggleLabel.textContent = 'Mesure active (Désactiver)';
+        measureHintEl.textContent = pendingPointA
+          ? 'Cliquez le 2e point pour terminer (Échap pour annuler).'
+          : 'Cliquez le 1er point sur la maison, la terrasse ou le terrain.';
+      } else {
+        document.body.classList.remove('measure-mode');
+        btnMeasureToggle.className = 'w-full flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-semibold text-xs py-2 px-3 transition active:scale-95';
+        measureDot.className = 'w-2 h-2 rounded-full bg-slate-400 shrink-0';
+        measureToggleLabel.textContent = "Activer l'outil de mesure";
+        measureHintEl.textContent = "Activez l'outil puis cliquez 2 points sur la maquette.";
+      }
+    }
+
+    function cancelPendingMeasure() {
+      pendingPointA = null;
+      pendingMarkerA.visible = false;
+      previewLine.visible = false;
+      plumbLine.visible = false;
+      previewLabelEl.style.display = 'none';
+      previewMidWorld = null;
+      if (completedMeasures.length > 0) {
+        const last = completedMeasures[completedMeasures.length - 1];
+        updateMeasureReadout(last.pA, last.pB);
+      } else {
+        updateMeasureReadout(null, null);
+      }
+      syncMeasureUI();
+    }
+
+    function isObjectTrulyVisible(obj) {
+      let curr = obj;
+      while (curr) {
+        if (!curr.visible) return false;
+        curr = curr.parent;
+      }
+      return true;
+    }
+
+    function isDescendantOf(obj, ancestor) {
+      let curr = obj;
+      while (curr) {
+        if (curr === ancestor) return true;
+        curr = curr.parent;
+      }
+      return false;
+    }
+
+    function raycastSceneSurface(clientX, clientY) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointerNDC, camera);
+
+      const candidates = [bodyGroup, terraceGroup];
+      if (roofGroup.visible && roofMode !== 'xray') candidates.push(roofGroup);
+      if (terrainGroup.visible) candidates.push(terrainGroup);
+      if (furnitureGroup.visible) candidates.push(furnitureGroup);
+      if (envGroup.visible) candidates.push(envGroup);
+
+      const hits = raycaster.intersectObjects(candidates, true);
+      for (const hit of hits) {
+        if (!hit.object.isMesh) continue;
+        if (!isObjectTrulyVisible(hit.object)) continue;
+        if (isDescendantOf(hit.object, glassGroup)) continue;
+        return hit.point.clone();
+      }
+      return null;
+    }
+
+    function createCompletedMeasurement(pA, pB) {
+      const grp = new THREE.Group();
+      const mA = createMeasureMarker(0x38bdf8, 0.085);
+      mA.position.copy(pA);
+      const mB = createMeasureMarker(0x38bdf8, 0.085);
+      mB.position.copy(pB);
+      grp.add(mA, mB);
+
+      // Cylindre 3D visible à toute distance + ligne fantôme translucide visible à travers les cloisons
+      const dist = pA.distanceTo(pB);
+      if (dist > 0.005) {
+        const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+        const cyl = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.022, 0.022, dist, 10),
+          mSegmentMat
+        );
+        cyl.position.copy(mid);
+        cyl.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 1, 0),
+          new THREE.Vector3().subVectors(pB, pA).normalize()
+        );
+        grp.add(cyl);
+
+        const ghostGeom = new THREE.BufferGeometry().setFromPoints([pA, pB]);
+        const ghostLine = new THREE.Line(ghostGeom, mGhostLineMat);
+        ghostLine.renderOrder = 997;
+        grp.add(ghostLine);
+      }
+
+      measureGroup.add(grp);
+
+      const distHoriz = Math.hypot(pB.x - pA.x, pB.z - pA.z);
+      const dy = Math.abs(pB.y - pA.y);
+      const labelEl = document.createElement('div');
+      labelEl.className = 'measure-label bg-slate-950/92 backdrop-blur-sm text-sky-200 font-mono px-2 py-0.5 rounded-lg text-[11px] shadow-lg border border-sky-400/70 text-center leading-tight';
+      if (dy >= 0.05) {
+        labelEl.innerHTML =
+          `<div class="font-bold text-white">${formatMeters(dist)}</div>` +
+          `<div class="text-[9px] text-sky-300">H ${distHoriz.toFixed(2).replace('.', ',')}m • ΔH ${dy.toFixed(2).replace('.', ',')}m</div>`;
+      } else {
+        labelEl.innerHTML = `<div class="font-bold text-white">${formatMeters(dist)}</div>`;
+      }
+      labelsLayer.appendChild(labelEl);
+
+      const midWorld = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+      midWorld.y += 0.14;
+      const entry = { pA: pA.clone(), pB: pB.clone(), midWorld, group: grp, labelEl };
+      completedMeasures.push(entry);
+      updateMeasureReadout(pA, pB);
+      syncMeasureUI();
+    }
+
+    function removeMeasurementEntry(entry) {
+      measureGroup.remove(entry.group);
+      entry.group.traverse(obj => {
+        if (obj.geometry) obj.geometry.dispose();
+      });
+      if (entry.labelEl && entry.labelEl.parentNode) {
+        entry.labelEl.parentNode.removeChild(entry.labelEl);
+      }
+    }
+
+    function updateMeasureLabels() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const projectWorld = (el, vec) => {
+        projVec.copy(vec).project(camera);
+        if (projVec.z > 1 || projVec.z < -1) {
+          el.style.display = 'none';
+          return;
+        }
+        el.style.display = 'block';
+        el.style.left = `${(projVec.x * 0.5 + 0.5) * w}px`;
+        el.style.top = `${(-projVec.y * 0.5 + 0.5) * h}px`;
+      };
+
+      for (const item of completedMeasures) {
+        projectWorld(item.labelEl, item.midWorld);
+      }
+      if (previewMidWorld && previewLine.visible) {
+        projectWorld(previewLabelEl, previewMidWorld);
+      } else {
+        previewLabelEl.style.display = 'none';
+      }
+    }
+
+    btnMeasureToggle.addEventListener('click', () => {
+      measureActive = !measureActive;
+      if (!measureActive) {
+        hoverMarker.visible = false;
+        cancelPendingMeasure();
+      }
+      syncMeasureUI();
+    });
+
+    toggleMeasureFlat.addEventListener('change', e => {
+      measureFlatMode = e.target.checked;
+    });
+
+    btnMeasureUndo.addEventListener('click', () => {
+      if (pendingPointA) {
+        cancelPendingMeasure();
+        return;
+      }
+      const last = completedMeasures.pop();
+      if (last) removeMeasurementEntry(last);
+      if (completedMeasures.length > 0) {
+        const prev = completedMeasures[completedMeasures.length - 1];
+        updateMeasureReadout(prev.pA, prev.pB);
+      } else {
+        updateMeasureReadout(null, null);
+      }
+      syncMeasureUI();
+    });
+
+    btnMeasureClear.addEventListener('click', () => {
+      cancelPendingMeasure();
+      while (completedMeasures.length > 0) {
+        removeMeasurementEntry(completedMeasures.pop());
+      }
+      updateMeasureReadout(null, null);
+      syncMeasureUI();
+    });
+
+    renderer.domElement.addEventListener('pointermove', e => {
+      if (!measureActive) return;
+      const hitPt = raycastSceneSurface(e.clientX, e.clientY);
+      if (!hitPt) {
+        hoverMarker.visible = false;
+        if (pendingPointA) {
+          previewLine.visible = false;
+          plumbLine.visible = false;
+          previewMidWorld = null;
+        }
+        return;
+      }
+
+      const targetPt = (pendingPointA && measureFlatMode)
+        ? new THREE.Vector3(hitPt.x, pendingPointA.y, hitPt.z)
+        : hitPt;
+
+      hoverMarker.position.copy(targetPt);
+      hoverMarker.visible = true;
+
+      if (pendingPointA) {
+        const posAttr = previewLineGeom.attributes.position;
+        posAttr.setXYZ(0, pendingPointA.x, pendingPointA.y, pendingPointA.z);
+        posAttr.setXYZ(1, targetPt.x, targetPt.y, targetPt.z);
+        posAttr.needsUpdate = true;
+        previewLine.visible = true;
+
+        if (measureFlatMode && Math.abs(hitPt.y - pendingPointA.y) > 0.03) {
+          const pAttr = plumbLineGeom.attributes.position;
+          pAttr.setXYZ(0, hitPt.x, hitPt.y, hitPt.z);
+          pAttr.setXYZ(1, targetPt.x, targetPt.y, targetPt.z);
+          pAttr.needsUpdate = true;
+          plumbLine.visible = true;
+        } else {
+          plumbLine.visible = false;
+        }
+
+        const liveDist = pendingPointA.distanceTo(targetPt);
+        previewLabelEl.textContent = formatMeters(liveDist);
+        previewMidWorld = new THREE.Vector3().addVectors(pendingPointA, targetPt).multiplyScalar(0.5);
+        previewMidWorld.y += 0.14;
+        updateMeasureReadout(pendingPointA, targetPt);
+      }
+    });
+
+    renderer.domElement.addEventListener('pointerdown', e => {
+      if (!measureActive || e.button !== 0) return;
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    });
+
+    renderer.domElement.addEventListener('pointerup', e => {
+      if (!measureActive || e.button !== 0 || !pointerDownPos) return;
+      const moved = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      pointerDownPos = null;
+      if (moved > 6) return; // Laisse OrbitControls tourner sans placer de point
+
+      const hitPt = raycastSceneSurface(e.clientX, e.clientY);
+      if (!hitPt) return;
+
+      if (!pendingPointA) {
+        pendingPointA = hitPt.clone();
+        pendingMarkerA.position.copy(pendingPointA);
+        pendingMarkerA.visible = true;
+        syncMeasureUI();
+      } else {
+        const ptB = measureFlatMode
+          ? new THREE.Vector3(hitPt.x, pendingPointA.y, hitPt.z)
+          : hitPt.clone();
+        const ptA = pendingPointA.clone();
+        pendingPointA = null;
+        pendingMarkerA.visible = false;
+        previewLine.visible = false;
+        plumbLine.visible = false;
+        previewMidWorld = null;
+        previewLabelEl.style.display = 'none';
+        createCompletedMeasurement(ptA, ptB);
+      }
+    });
+
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (pendingPointA) {
+        cancelPendingMeasure();
+      } else if (measureActive) {
+        measureActive = false;
+        hoverMarker.visible = false;
+        syncMeasureUI();
+      }
+    });
+
     function animate() {
       requestAnimationFrame(animate);
 
@@ -4143,6 +4643,7 @@ ${itemsXML.join('\n')}
       controls.update();
       renderer.render(scene, camera);
       updateAllLabels();
+      updateMeasureLabels();
     }
 
     function initApp() {
