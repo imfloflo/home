@@ -1295,47 +1295,39 @@
     ], mat.floorGarage, 0.007);
 
     // -------------------------------------------------------------------------
-    // 8A. AILE NUIT NORD-OUEST & DÉCROCHAGE PIÈCES DE VIE / DÉGAGEMENT (4,93 m²)
+    // 8A. CLOISONS ZONE NUIT (CH.1, BAINS, WC, DÉGAGEMENT AVEC DÉCROCHAGE, CH.2, BUREAU)
     // -------------------------------------------------------------------------
-    // Mur droit au sud de Chambre 1 + placard Dégagement (2,17 m) : px = 0.32 -> 6.29 à pz = 3.94
-    addPartition(0.32, 3.94, 6.29, 3.94, []);
+    // Séparation Chambre 1 + placard Dégagement / Pièces de vie (z = 3.94)
+    addPartition(0.32, 3.94, 6.26, 3.94, []);
 
-    // *** CORRECTION CRITIQUE : DÉCROCHAGE ENTRE PIÈCES DE VIE ET DÉGAGEMENT ***
-    // Retour vers le Nord de 0,62 m à px = 6.29 (pz = 3.94 -> 3.32)
-    addPartition(6.29, 3.94, 6.29, 3.32, []);
-    // Cloison en retrait au fond du décrochage (pz = 3.32, px = 6.29 -> 7.42) avec porte PP 83 (px = 6.38..7.21)
-    addPartition(6.29, 3.32, 7.42, 3.32, [{ s0: 0.09, s1: 0.92, swing: -1 }]);
-    // Retour vers le Sud à px = 7.42 (inclus dans la cloison Ouest de Chambre 2 : pz = 0.32 -> 3.94)
-    addPartition(7.42, 0.32, 7.42, 3.94, [{ s0: 2.08, s1: 2.91, swing: 1 }]); // Porte Ch2 (pz = 2.40..3.23)
+    // Décrochage de 0,62 m vers le Nord entre Pièces de vie et Dégagement (4,93 m²)
+    addPartition(6.26, 3.94, 6.26, 3.32, []);
+    addPartition(6.26, 3.32, 7.45, 3.32, [{ s0: 0.18, s1: 1.01, swing: 1 }]); // Porte PP 83 Dégagement en retrait
 
-    // Cloison Est de Chambre 1 (px = 4.05, pz = 0.32 -> 3.94) avec porte PP 83 (pz = 2.40..3.23)
+    // Séparation Chambre 1 / (Bains + Dégagement) avec porte PP 83 vers Ch.1
     addPartition(4.05, 0.32, 4.05, 3.94, [{ s0: 2.08, s1: 2.91, swing: -1 }]);
 
-    // Salle de bains (4,78 m²) & WC (1,73 m²)
-    addPartition(6.45, 0.32, 6.45, 2.32, []);                                // Bains / WC
-    addPartition(4.05, 2.32, 6.45, 2.32, [{ s0: 0.80, s1: 1.63, swing: -1 }]); // Porte Bains
-    addPartition(6.45, 2.25, 7.42, 2.25, [{ s0: 0.08, s1: 0.91, swing: -1 }]); // Porte WC 1,73 m²
+    // Bains (4,78 m²) & WC (1,73 m²)
+    addPartition(6.45, 0.32, 6.45, 2.32, []);                                 // Cloison Bains / WC
+    addPartition(4.05, 2.32, 6.45, 2.32, [{ s0: 1.33, s1: 2.16, swing: 1 }]); // Porte PP 83 Bains
+    addPartition(6.45, 2.32, 7.45, 2.32, [{ s0: 0.11, s1: 0.89, swing: -1 }]);// Porte WC -> Dégagement
 
-    // Chambre 2 (12,00 m²) : mur Sud (pz = 3.94) & mur Est (px = 10.90)
-    addPartition(7.42, 3.94, 10.90, 3.94, []);
-    addPartition(10.90, 0.32, 10.90, 4.25, []);
+    // Chambre 2 (12,00 m²)
+    addPartition(7.45, 0.32, 7.45, 3.94, [{ s0: 2.08, s1: 2.91, swing: 1 }]); // Séparation Dgt & WC / Ch.2 + porte PP 83
+    addPartition(7.45, 3.94, 10.90, 3.94, []);                                // Cloison Sud Ch.2 / Pièces de vie
+    addPartition(10.90, 0.32, 10.90, 4.25, []);                               // Séparation Ch.2 / Bureau
 
-    // Bureau (14,11 m²) : mur Sud à pz = 4.25 (décalé de 0,31 m vers le Sud) & porte PP 83 vers couloir
-    addPartition(10.90, 4.25, 14.57, 4.25, [{ s0: 2.65, s1: 3.48, swing: -1 }]); // px = 13.55..14.38
-    addPartition(14.57, 0.32, 14.57, 4.25, []);                                  // Bureau / Chambre 3
-
-    // Placard d'entrée séparant Cuisine et couloir d'Entrée (px = 10.25..10.87, pz = 5.95..9.04)
-    addPartition(10.87, 5.95, 10.87, 9.04, []);
-    addPartition(10.25, 5.95, 10.87, 5.95, []);
-    addPartition(10.25, 5.95, 10.25, 9.04, []);
+    // Bureau (14,11 m²) & séparation Chambre 3
+    addPartition(10.90, 4.25, 14.57, 4.25, [{ s0: 2.55, s1: 3.38, hingeEnd: true, swing: -1 }]); // Porte PP 83 Bureau
+    addPartition(14.57, 0.32, 14.57, 4.25, []);                                                   // Séparation Bureau / Ch.3
 
     // -------------------------------------------------------------------------
-    // 8B. WC D'ENTRÉE (1,64 m²) — CORRECTION CRITIQUE PORTE SUR MUR COULOIR
+    // 8B. WC D'ENTRÉE (1,64 m²) — PORTE SUR LE MUR NORD DONNANT DANS LE COULOIR
     // -------------------------------------------------------------------------
-    // Mur OUEST (px = 12.58, pz = 5.96 -> 7.60) : PORTE PP 83 DONNANT DANS LE COULOIR (pz = 6.04..6.87)
-    addPartition(12.58, 5.96, 12.58, 7.60, [{ s0: 0.08, s1: 0.91, swing: -1 }]);
-    // Mur NORD (pz = 5.96, px = 12.58 -> 13.65) : COMPLETEMENT PLEIN (AUCUNE PORTE)
-    addPartition(12.58, 5.96, 13.65, 5.96, []);
+    // Mur OUEST (px = 12.58, pz = 5.96 -> 7.60) : COMPLETEMENT PLEIN (AUCUNE PORTE)
+    addPartition(12.58, 5.96, 12.58, 7.60, []);
+    // Mur NORD (pz = 5.96, px = 12.58 -> 13.65) : PORTE PP 83 DONNANT DANS LE COULOIR (px = 12.70..13.53)
+    addPartition(12.58, 5.96, 13.65, 5.96, [{ s0: 0.12, s1: 0.95, swing: 1 }]);
     // Mur EST (px = 13.65, pz = 5.96 -> 7.60) : COMPLETEMENT PLEIN (partagé avec Cellier)
     addPartition(13.65, 5.96, 13.65, 7.60, []);
 
@@ -1650,19 +1642,20 @@
     // =========================================================================
     // 11. TERRASSE 3,60 m EN DALLES 60×60 CM CONTINUE SOUS LE PATIO D'ENTRÉE
     // =========================================================================
-    // Largeur exacte 3,60 m devant façade Sud (Z = 9.36 -> 12.96 = 6 dalles de 60 cm),
-    // retour pignon Ouest (X = -3.00 -> 0.00 = 5 dalles) et prolongement continu sous
-    // tout le patio couvert jusqu'à la limite de la porte de garage (16.71, 9.28).
+    // Largeur exacte 3,60 m (6 dalles de 60 cm) devant la façade Sud et le long
+    // du pignon Ouest prolongé jusqu'à l'arrière de la maison (Z = 0,00), avec
+    // pan coupé à 45° (1,20 m à l'angle Ouest) et prolongement continu sous le patio.
     const terracePoly = [
-      [-3.00,  3.36],
-      [ 0.00,  3.36],
+      [-3.60,  0.00],
+      [ 0.00,  0.00],
       [ 0.00,  9.36],
       [12.90,  9.36],
       [12.90,  7.92],
       [15.35,  7.92],
       [16.71,  9.28],
       [12.96, 12.96],
-      [-3.00, 12.96]
+      [ 1.90, 12.96],
+      [-3.60,  7.46]
     ];
 
     // Soubassement terrasse descendant proprement dans le terrain
@@ -1706,13 +1699,13 @@
 
       const gridPts = [];
       const yGrid = -0.017;
-      for (let x = -3.00; x <= 16.80 + 1e-4; x += 0.60) {
+      for (let x = -3.60; x <= 16.80 + 1e-4; x += 0.60) {
         const zs = clipLineWithPoly(true, x);
         for (let k = 0; k + 1 < zs.length; k += 2) {
           gridPts.push(x, yGrid, zs[k], x, yGrid, zs[k + 1]);
         }
       }
-      for (let z = 3.36; z <= 12.96 + 1e-4; z += 0.60) {
+      for (let z = 0.36; z <= 12.96 + 1e-4; z += 0.60) {
         const xs = clipLineWithPoly(false, z);
         for (let k = 0; k + 1 < xs.length; k += 2) {
           gridPts.push(xs[k], yGrid, z, xs[k + 1], yGrid, z);
@@ -1781,6 +1774,33 @@
       return v >= 14.2;                                            // Bande Avenue de V
     }
 
+    // Texture procédurale partagée de gravier concassé gris anthracite (identique à l'arrière, devant le garage et dans l'allée)
+    function createCrushedGravelTexture() {
+      const gc = document.createElement('canvas');
+      gc.width = 512; gc.height = 512;
+      const gctx = gc.getContext('2d');
+      gctx.fillStyle = '#3e444d';
+      gctx.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 36000; i++) {
+        const shade = 48 + Math.floor(Math.random() * 44);
+        gctx.fillStyle = `rgb(${shade},${shade + 4},${shade + 10})`;
+        gctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(gc);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    const GRAVEL_UV_SCALE = 0.225; // Même granulométrie sur toutes les zones gravillonnées
+    const sharedGravelTex = createCrushedGravelTexture();
+    const sharedGravelMat = new THREE.MeshStandardMaterial({
+      map: sharedGravelTex,
+      roughness: 0.95,
+      metalness: 0.01
+    });
+
     function buildSolidTerrain() {
       const grid = [];
       for (let iv = 0; iv <= NV; iv++) {
@@ -1803,111 +1823,109 @@
         })
       );
 
-      const pos = [], norm = [], col = [];
+      const pos = [], norm = [], col = [], gravelMask = [];
       const cGrass1      = new THREE.Color(0x527a37);
       const cGrass2      = new THREE.Color(0x3f642a);
-      const cDarkGravel  = new THREE.Color(0x535962);
-      const cDriveGravel = new THREE.Color(0x636972);
+      const cDarkGravel  = new THREE.Color(0x42474e);
       const cWhitePebble = new THREE.Color(0xe4dfd3);
       const cRoad        = new THREE.Color(0x3b4048);
       const cRoadMark    = new THREE.Color(0xd5d8dc);
       const cSkirt       = new THREE.Color(0x5c5750);
 
-      function pointSurfaceColor(x, z, u, v) {
+      function pointSurfaceInfo(x, z, u, v) {
         // 1. Avenue de V au bout de la parcelle 93
         if (u > 43.2) {
-          if (Math.abs(u - 45.1) < 0.14 && Math.floor(v / 1.8) % 2 === 0) return cRoadMark;
-          return cRoad;
+          if (Math.abs(u - 45.1) < 0.14 && Math.floor(v / 1.8) % 2 === 0) {
+            return { color: cRoadMark, gravel: 0.0 };
+          }
+          return { color: cRoad, gravel: 0.0 };
         }
 
-        // 2. Longue allée en cailloux (parcelles 286 & 93)
+        // 2. Longue allée en cailloux (parcelles 286 & 93) — même gravier concassé
         if (u > 14.35) {
-          const g = (Math.sin(x * 3.7 + z * 2.9) * 0.5 + 0.5) * 0.05;
-          return cDriveGravel.clone().offsetHSL(0, 0, g - 0.025);
+          return { color: cDarkGravel, gravel: 1.0 };
         }
 
-        // 3. Zone gravier gris anthracite : derrière mur NE, pignon garage & cour avant
+        // 3. Toutes les zones grises : arrière maison, côté garage & cour devant le garage
         const inGarageBackAndSide = (u >= -0.35 && v <= 6.85);
-        const inBackHouseStrip    = (z <= 0.05 && z >= -0.85 && x >= -0.25 && x <= 17.25);
-        const inFrontCourtyard    = (u >= -5.65 && v > 6.85);
+        const inBackHouseStrip    = (z <= 0.05 && z >= -1.00 && x >= 0.00 && x <= 17.56);
+        const inFrontCourtyard    = (u >= -9.327 && v >= 19.80) || (u >= -1.55 && z >= 12.88) || (u >= 6.20 && v > 6.80);
 
         if (inGarageBackAndSide || inBackHouseStrip || inFrontCourtyard) {
-          // Massifs décoratifs en galets blancs devant la terrasse (visibles sur la photo drone)
-          const dBedCorner = Math.hypot((u - 8.2) / 2.2, (v - 21.6) / 2.0);
-          const inBedPatio = (x >= 8.2 && x <= 14.0 && z >= 12.95 && z <= 14.35);
-          const inBedFront = (x >= -1.0 && x <= 3.6 && z >= 12.95 && z <= 14.25);
-          if (dBedCorner < 1.0 || inBedPatio || inBedFront) {
-            const wGrain = (Math.sin(x * 5.0 + z * 4.3) * 0.5 + 0.5) * 0.03;
-            return cWhitePebble.clone().offsetHSL(0, 0, wGrain - 0.015);
-          }
-
-          const grain = (Math.sin(x * 3.4 + z * 2.8) * 0.5 + 0.5) * 0.045;
-          return cDarkGravel.clone().offsetHSL(0, 0, grain - 0.022);
+          return { color: cDarkGravel, gravel: 1.0 };
         }
 
-        // 4. Pelouse verte du jardin Nord & Ouest (photo drone)
-        const n = Math.sin(x * 0.31 + z * 0.19) * Math.cos(z * 0.35 - x * 0.14) * 0.5 + 0.5;
-        return cGrass2.clone().lerp(cGrass1, n);
+        // 4. Pelouse jardin Nord & Ouest (parcelle 285)
+        const n = Math.sin(x * 0.32) * Math.cos(z * 0.32) * 0.5 + 0.5;
+        return { color: cGrass2.clone().lerp(cGrass1, n), gravel: 0.0 };
       }
 
-      const pushTri = (a, b, c, dir, cA, cB, cC) => {
+      const pushTri = (a, b, c, expectedDir, cA, cB, cC, gA = 0.0, gB = 0.0, gC = 0.0) => {
         const ab = new THREE.Vector3().subVectors(b, a);
         const ac = new THREE.Vector3().subVectors(c, a);
         const n = new THREE.Vector3().crossVectors(ab, ac);
         let v1 = a, v2 = b, v3 = c;
         let k1 = cA, k2 = cB, k3 = cC;
-        if (n.dot(dir) < 0) { v2 = c; v3 = b; k2 = cC; k3 = cB; n.negate(); }
+        let m1 = gA, m2 = gB, m3 = gC;
+        if (n.dot(expectedDir) < 0) {
+          v2 = c; v3 = b;
+          k2 = cC; k3 = cB;
+          m2 = gC; m3 = gB;
+          n.negate();
+        }
         n.normalize();
         pos.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
         norm.push(n.x, n.y, n.z, n.x, n.y, n.z, n.x, n.y, n.z);
         col.push(k1.r, k1.g, k1.b, k2.r, k2.g, k2.b, k3.r, k3.g, k3.b);
+        gravelMask.push(m1, m2, m3);
       };
 
       const up = new THREE.Vector3(0, 1, 0);
       const down = new THREE.Vector3(0, -1, 0);
-      const dirUPlus  = new THREE.Vector3( SQRT1_2, 0,  SQRT1_2);
-      const dirUMinus = new THREE.Vector3(-SQRT1_2, 0, -SQRT1_2);
-      const dirVPlus  = new THREE.Vector3(-SQRT1_2, 0,  SQRT1_2);
-      const dirVMinus = new THREE.Vector3( SQRT1_2, 0, -SQRT1_2);
+      const dirPosU = new THREE.Vector3( SQRT1_2, 0,  SQRT1_2);
+      const dirNegU = new THREE.Vector3(-SQRT1_2, 0, -SQRT1_2);
+      const dirPosV = new THREE.Vector3(-SQRT1_2, 0,  SQRT1_2);
+      const dirNegV = new THREE.Vector3( SQRT1_2, 0, -SQRT1_2);
 
-      const addSkirtEdge = (t0, t1, outDir) => {
+      const addSkirtQuad = (t0, t1, outDir) => {
         const b0 = new THREE.Vector3(t0.x, BASE_Y, t0.z);
         const b1 = new THREE.Vector3(t1.x, BASE_Y, t1.z);
         pushTri(b0, b1, t1, outDir, cSkirt, cSkirt, cSkirt);
         pushTri(b0, t1, t0, outDir, cSkirt, cSkirt, cSkirt);
       };
 
+      // Construction étanche (dessus + dessous à BASE_Y + jupes uniquement sur les bords libres)
       for (let iv = 0; iv < NV; iv++) {
         for (let iu = 0; iu < NU; iu++) {
           if (!active[iv][iu]) continue;
 
-          const g00 = grid[iv][iu];
-          const g10 = grid[iv][iu + 1];
-          const g11 = grid[iv + 1][iu + 1];
-          const g01 = grid[iv + 1][iu];
+          const n00 = grid[iv][iu];
+          const n10 = grid[iv][iu + 1];
+          const n11 = grid[iv + 1][iu + 1];
+          const n01 = grid[iv + 1][iu];
 
-          const k00 = pointSurfaceColor(g00.pos.x, g00.pos.z, g00.u, g00.v);
-          const k10 = pointSurfaceColor(g10.pos.x, g10.pos.z, g10.u, g10.v);
-          const k11 = pointSurfaceColor(g11.pos.x, g11.pos.z, g11.u, g11.v);
-          const k01 = pointSurfaceColor(g01.pos.x, g01.pos.z, g01.u, g01.v);
+          const s00 = pointSurfaceInfo(n00.pos.x, n00.pos.z, n00.u, n00.v);
+          const s10 = pointSurfaceInfo(n10.pos.x, n10.pos.z, n10.u, n10.v);
+          const s11 = pointSurfaceInfo(n11.pos.x, n11.pos.z, n11.u, n11.v);
+          const s01 = pointSurfaceInfo(n01.pos.x, n01.pos.z, n01.u, n01.v);
 
-          // Surface supérieure
-          pushTri(g00.pos, g01.pos, g11.pos, up, k00, k01, k11);
-          pushTri(g00.pos, g11.pos, g10.pos, up, k00, k11, k10);
+          // Face supérieure
+          pushTri(n00.pos, n01.pos, n11.pos, up, s00.color, s01.color, s11.color, s00.gravel, s01.gravel, s11.gravel);
+          pushTri(n00.pos, n11.pos, n10.pos, up, s00.color, s11.color, s10.color, s00.gravel, s11.gravel, s10.gravel);
 
-          // Face inférieure plane à BASE_Y (volume 100 % fermé pour impression 3D)
-          const b00 = new THREE.Vector3(g00.pos.x, BASE_Y, g00.pos.z);
-          const b10 = new THREE.Vector3(g10.pos.x, BASE_Y, g10.pos.z);
-          const b11 = new THREE.Vector3(g11.pos.x, BASE_Y, g11.pos.z);
-          const b01 = new THREE.Vector3(g01.pos.x, BASE_Y, g01.pos.z);
-          pushTri(b00, b10, b11, down, cSkirt, cSkirt, cSkirt);
+          // Face inférieure fermée à BASE_Y
+          const b00 = new THREE.Vector3(n00.pos.x, BASE_Y, n00.pos.z);
+          const b10 = new THREE.Vector3(n10.pos.x, BASE_Y, n10.pos.z);
+          const b11 = new THREE.Vector3(n11.pos.x, BASE_Y, n11.pos.z);
+          const b01 = new THREE.Vector3(n01.pos.x, BASE_Y, n01.pos.z);
           pushTri(b00, b11, b01, down, cSkirt, cSkirt, cSkirt);
+          pushTri(b00, b10, b11, down, cSkirt, cSkirt, cSkirt);
 
-          // Jupes verticales sur les bords extérieurs exacts des parcelles 285/286/93
-          if (iu === 0      || !active[iv][iu - 1]) addSkirtEdge(g00.pos, g01.pos, dirUMinus);
-          if (iu === NU - 1 || !active[iv][iu + 1]) addSkirtEdge(g10.pos, g11.pos, dirUPlus);
-          if (iv === 0      || !active[iv - 1][iu]) addSkirtEdge(g00.pos, g10.pos, dirVMinus);
-          if (iv === NV - 1 || !active[iv + 1][iu]) addSkirtEdge(g01.pos, g11.pos, dirVPlus);
+          // Jupes verticales sur les arêtes périphériques de l'emprise cadastrale
+          if (iv === 0 || !active[iv - 1][iu])      addSkirtQuad(n00.pos, n10.pos, dirNegV);
+          if (iv === NV - 1 || !active[iv + 1][iu]) addSkirtQuad(n11.pos, n01.pos, dirPosV);
+          if (iu === 0 || !active[iv][iu - 1])      addSkirtQuad(n01.pos, n00.pos, dirNegU);
+          if (iu === NU - 1 || !active[iv][iu + 1]) addSkirtQuad(n10.pos, n11.pos, dirPosU);
         }
       }
 
@@ -1915,119 +1933,383 @@
       geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       geom.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
       geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-      const mesh = new THREE.Mesh(geom, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.94 }));
-      tagPrintable(mesh, 'Socle_Terrain', '#688250');
+      geom.setAttribute('aGravelMask', new THREE.Float32BufferAttribute(gravelMask, 1));
+
+      const terrainMat = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.95,
+        metalness: 0.01
+      });
+      terrainMat.onBeforeCompile = (shader) => {
+        shader.uniforms.uGravelMap     = { value: sharedGravelTex };
+        shader.uniforms.uGravelUvScale = { value: GRAVEL_UV_SCALE };
+        shader.uniforms.uGrass1        = { value: cGrass1 };
+        shader.uniforms.uGrass2        = { value: cGrass2 };
+        shader.uniforms.uRoad          = { value: cRoad };
+        shader.uniforms.uRoadMark      = { value: cRoadMark };
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            '#include <common>',
+            `#include <common>
+            uniform float uGravelUvScale;
+            varying vec3 vPlanPos;
+            varying float vTopFace;
+            varying vec2 vGravelUv;`
+          )
+          .replace(
+            '#include <begin_vertex>',
+            `#include <begin_vertex>
+            vPlanPos = position;
+            vTopFace = normal.y;
+            vGravelUv = vec2(position.x * uGravelUvScale, -position.z * uGravelUvScale);`
+          );
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            '#include <common>',
+            `#include <common>
+            uniform sampler2D uGravelMap;
+            uniform vec3 uGrass1;
+            uniform vec3 uGrass2;
+            uniform vec3 uRoad;
+            uniform vec3 uRoadMark;
+            varying vec3 vPlanPos;
+            varying float vTopFace;
+            varying vec2 vGravelUv;`
+          )
+          .replace(
+            '#include <color_fragment>',
+            `#include <color_fragment>
+            if (vTopFace > 0.5) {
+              float u = ((vPlanPos.x - 17.05) + vPlanPos.z) * 0.70710678;
+              float v = (-(vPlanPos.x - 17.05) + vPlanPos.z) * 0.70710678;
+
+              if (u > 43.2) {
+                float isDash = (abs(u - 45.1) < 0.14 && mod(floor(v / 1.8), 2.0) < 0.5) ? 1.0 : 0.0;
+                diffuseColor.rgb = mix(uRoad, uRoadMark, isDash);
+              } else {
+                float nGrass = sin(vPlanPos.x * 0.32) * cos(vPlanPos.z * 0.32) * 0.5 + 0.5;
+                vec3 grassCol = mix(uGrass2, uGrass1, nGrass);
+                vec3 gravelTexCol = texture2D(uGravelMap, vGravelUv).rgb;
+
+                float mAlley     = smoothstep(14.33, 14.37, u);
+                float mGarBack   = smoothstep(-0.37, -0.33, u) * (1.0 - smoothstep(6.83, 6.87, v));
+                float mBackStrip = (1.0 - smoothstep(0.03, 0.07, vPlanPos.z))
+                                 * smoothstep(-1.02, -0.98, vPlanPos.z)
+                                 * smoothstep(-0.02, 0.02, vPlanPos.x);
+                float mFront1    = smoothstep(-9.347, -9.307, u) * smoothstep(19.78, 19.82, v);
+                float mFront2    = smoothstep(-1.57, -1.53, u) * smoothstep(12.86, 12.90, vPlanPos.z);
+                float mFront3    = smoothstep(6.18, 6.22, u) * smoothstep(6.78, 6.82, v);
+
+                float gMask = max(max(mAlley, mGarBack), max(mBackStrip, max(mFront1, max(mFront2, mFront3))));
+                diffuseColor.rgb = mix(grassCol, gravelTexCol, gMask);
+              }
+            }`
+          );
+      };
+
+      const mesh = new THREE.Mesh(geom, terrainMat);
+      tagPrintable(mesh, 'Socle_Terrain', '#68834B');
       return mesh;
     }
 
     terrainGroup.add(buildSolidTerrain());
 
     // =========================================================================
-    // 13. ENVIRONNEMENT PHOTO DRONE (PAC, MURETS, HAIES, CLÔTURES, MASSIFS & NORD)
+    // 13. AMÉNAGEMENTS EXTÉRIEURS (MURETS, HAIES, CLÔTURES, PAC & VÉGÉTATION)
     // =========================================================================
-    // Véhicule gris stationné dans la cour gravillonnée (comme sur la photo drone)
-    {
-      const cp = uvToPlan(9.8, 12.2);
-      addStylizedCar(cp.x, getTerrainHeight(cp.x, cp.y), cp.y, -Math.PI / 4 + 0.04, 0x5c636b);
-    }
+    const concreteWallMat = new THREE.MeshStandardMaterial({ color: 0xb0b3b8, roughness: 0.90 });
+    const stoneWallMat    = new THREE.MeshStandardMaterial({ color: 0x8d8579, roughness: 0.95 });
+    const hedgeMat        = new THREE.MeshStandardMaterial({ color: 0x3b6333, roughness: 0.92 });
+    const curbMat         = new THREE.MeshStandardMaterial({ color: 0xc2c5ca, roughness: 0.85 });
+    const edgingMat       = new THREE.MeshStandardMaterial({ color: 0x2c3138, roughness: 0.72, metalness: 0.25 });
+    const fenceMat        = new THREE.MeshStandardMaterial({ color: 0x2f353b, roughness: 0.50, metalness: 0.40 });
+    const meshWireMat     = new THREE.MeshStandardMaterial({
+      color: 0x374151,
+      roughness: 0.60,
+      metalness: 0.45,
+      transparent: true,
+      opacity: 0.42
+    });
 
-    function addHeatPumpUnit(x, z, w, h, d) {
-      const y = getTerrainHeight(x, z);
-      const g = new THREE.Group();
-      g.position.set(x, y, z);
-      g.rotation.y = Math.PI / 4;
-
-      const pad = new THREE.Mesh(
-        new THREE.BoxGeometry(w + 0.14, 0.08, d + 0.14),
-        new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.9 })
-      );
-      pad.position.y = 0.04;
-      pad.receiveShadow = true;
-      g.add(pad);
-
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, d),
-        new THREE.MeshStandardMaterial({ color: 0xe6e4de, roughness: 0.55 })
-      );
-      body.position.y = 0.08 + h * 0.5;
-      body.castShadow = true;
-      body.receiveShadow = true;
-      g.add(body);
-
-      const fan = new THREE.Mesh(
-        new THREE.CylinderGeometry(h * 0.34, h * 0.34, 0.04, 16),
-        new THREE.MeshStandardMaterial({ color: 0x2d3238, roughness: 0.7 })
-      );
-      fan.rotation.x = Math.PI / 2;
-      fan.position.set(-w * 0.14, 0.08 + h * 0.5, d * 0.5 + 0.005);
-      g.add(fan);
-
-      envGroup.add(g);
-    }
-    // Deux unités extérieures PAC contre le pignon SE garage
-    addHeatPumpUnit(24.30, 10.30, 0.90, 0.78, 0.38);
-    addHeatPumpUnit(25.05,  9.55, 0.68, 0.56, 0.32);
-
-    // Outil générique pour murets, bordures et clôtures suivant le relief en (u, v)
-    function addWallLineUV(u1, v1, u2, v2, segs, height, thick, material, yEmbed = 0.05) {
+    function addWallLineUV(u1, v1, u2, v2, segs, height, thick, material, sink = 0.04) {
       const p1 = uvToPlan(u1, v1);
       const p2 = uvToPlan(u2, v2);
+      const rotY = Math.atan2(-(p2.y - p1.y), p2.x - p1.x);
+      const totalLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const segLen = totalLen / segs;
+
       for (let i = 0; i < segs; i++) {
-        const t0 = i / segs, t1 = (i + 1) / segs;
-        const xa = THREE.MathUtils.lerp(p1.x, p2.x, t0);
-        const za = THREE.MathUtils.lerp(p1.y, p2.y, t0);
-        const xb = THREE.MathUtils.lerp(p1.x, p2.x, t1);
-        const zb = THREE.MathUtils.lerp(p1.y, p2.y, t1);
-        const xm = (xa + xb) * 0.5, zm = (za + zb) * 0.5;
-        const ym = getTerrainHeight(xm, zm);
-        const len = Math.hypot(xb - xa, zb - za);
-        const rot = Math.atan2(-(zb - za), xb - xa);
-        const m = new THREE.Mesh(new THREE.BoxGeometry(len + 0.03, height, thick), material);
-        m.position.set(xm, ym + height * 0.5 - yEmbed, zm);
-        m.rotation.y = rot;
+        const t = (i + 0.5) / segs;
+        const x = THREE.MathUtils.lerp(p1.x, p2.x, t);
+        const z = THREE.MathUtils.lerp(p1.y, p2.y, t);
+        const y = getTerrainHeight(x, z);
+        const m = new THREE.Mesh(new THREE.BoxGeometry(segLen + 0.02, height, thick), material);
+        m.position.set(x, y + height * 0.5 - sink, z);
+        m.rotation.y = rotY;
         m.castShadow = true;
         m.receiveShadow = true;
         envGroup.add(m);
       }
     }
 
-    const concreteWallMat = new THREE.MeshStandardMaterial({ color: 0xb4b6b8, roughness: 0.9 });
-    const stoneWallMat    = new THREE.MeshStandardMaterial({ color: 0x877e71, roughness: 0.95 });
-    const curbMat         = new THREE.MeshStandardMaterial({ color: 0xd8d7d2, roughness: 0.85 });
-    const woodBorderMat   = new THREE.MeshStandardMaterial({ color: 0x9c764e, roughness: 0.88 });
-    const hedgeMat        = new THREE.MeshStandardMaterial({ color: 0x3b632d, roughness: 0.9 });
-    const fenceMat        = new THREE.MeshStandardMaterial({ color: 0x32383f, roughness: 0.6 });
-    const meshWireMat     = new THREE.MeshStandardMaterial({ color: 0x2f353b, transparent: true, opacity: 0.28, roughness: 0.8 });
+    // 1. Muret béton de soutènement au fond du jardin Nord (gauche photo drone, u = -21.2)
+    addWallLineUV(-21.2, -2.8, -21.2, 23.0, 14, 0.85, 0.30, concreteWallMat, 0.12);
 
-    // 1. Muret béton de soutènement au Nord (gauche photo drone, u = -21.2)
-    addWallLineUV(-21.2, -2.9, -21.2, 23.2, 12, 1.05, 0.34, concreteWallMat);
+    // 2. Muret en pierres sèches côté Ouest (bas photo drone, v = 23.1) + unités extérieures PAC
+    addWallLineUV(-21.2, 23.1, 14.2, 23.1, 18, 0.65, 0.36, stoneWallMat, 0.10);
 
-    // 2. Ancien muret en pierres à l'Ouest le long des parcelles 97 & 95 (bas photo drone, v = 23.2)
-    addWallLineUV(-21.2, 23.2, 42.6, 23.2, 24, 0.95, 0.36, stoneWallMat);
+    {
+      const pacMat = new THREE.MeshStandardMaterial({ color: 0xe6e8eb, roughness: 0.45, metalness: 0.15 });
+      const pacFanMat = new THREE.MeshStandardMaterial({ color: 0x2a2f36, roughness: 0.7 });
+      const pacPt1 = uvToPlan(12.60, 4.90);
+      const pacPt2 = uvToPlan(12.60, 3.70);
+      [
+        { pt: pacPt1, w: 0.96, h: 0.95, d: 0.40 },
+        { pt: pacPt2, w: 0.72, h: 0.62, d: 0.32 }
+      ].forEach(({ pt, w, h, d }) => {
+        const y = getTerrainHeight(pt.x, pt.y);
+        const g = new THREE.Group();
+        g.position.set(pt.x, y + h * 0.5, pt.y);
+        g.rotation.y = Math.PI / 4;
+        const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), pacMat);
+        box.castShadow = true;
+        box.receiveShadow = true;
+        g.add(box);
+        const fan = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.32, h * 0.32, 0.04, 16), pacFanMat);
+        fan.rotation.x = Math.PI / 2;
+        fan.position.set(-w * 0.14, 0, d * 0.5 + 0.005);
+        g.add(fan);
+        envGroup.add(g);
+      });
+    }
 
     // 3. Haie verte dense côté Est le long de la parcelle 90 (haut photo drone, v = -2.85)
     addWallLineUV(-20.8, -2.85, 14.1, -2.85, 22, 1.55, 0.65, hedgeMat, 0.1);
 
-    // 4. Bordures béton propres séparant la pelouse du gravier gris (visibles photo drone)
-    addWallLineUV(-0.35, -2.6, -0.35, 0.0, 2, 0.14, 0.08, curbMat, 0.03);
-    // Bordure longeant la bande de gravier derrière le mur arrière P0->P1
+    // 4. Bande de cailloux gris anthracite de 1,00 m à l'arrière de la maison + bordure béton continue (d'après photo arrière)
     {
-      const b1 = planToUV(0.0, -0.82), b2 = planToUV(17.0, -0.82);
-      addWallLineUV(b1.u, b1.v, b2.u, b2.v, 8, 0.14, 0.08, curbMat, 0.03);
+      // Trapèze exact de 1,00 m de large : du mur arrière (z = 0) à la bordure (z = -1,00),
+      // de x = 0,00 (jonction terrasse) jusqu'au raccord 45° Est (x = 17,555 à z = -1,00, soit u = -0,35)
+      const cols = 36, rows = 4;
+      const gPos = [], gUv = [], gIdx = [];
+      for (let iz = 0; iz <= rows; iz++) {
+        const tz = iz / rows;
+        const z = -1.00 * tz;
+        const xMax = 17.05 + 0.505 * tz;
+        for (let ix = 0; ix <= cols; ix++) {
+          const tx = ix / cols;
+          const x = tx * xMax;
+          const yLift = THREE.MathUtils.lerp(0.024, 0.008, Math.max(0, (tx - 0.92) / 0.08));
+          const y = getTerrainHeight(x, Math.min(z, -0.22)) + yLift;
+          gPos.push(x, y, z);
+          gUv.push(x * GRAVEL_UV_SCALE, -z * GRAVEL_UV_SCALE);
+        }
+      }
+      for (let iz = 0; iz < rows; iz++) {
+        for (let ix = 0; ix < cols; ix++) {
+          const v00 = iz * (cols + 1) + ix;
+          const v10 = v00 + 1;
+          const v01 = (iz + 1) * (cols + 1) + ix;
+          const v11 = v01 + 1;
+          gIdx.push(v00, v10, v11, v00, v11, v01);
+        }
+      }
+      const rearGravelGeom = new THREE.BufferGeometry();
+      rearGravelGeom.setAttribute('position', new THREE.Float32BufferAttribute(gPos, 3));
+      rearGravelGeom.setAttribute('uv', new THREE.Float32BufferAttribute(gUv, 2));
+      rearGravelGeom.setIndex(gIdx);
+      rearGravelGeom.computeVertexNormals();
+
+      const rearGravelMesh = new THREE.Mesh(rearGravelGeom, sharedGravelMat);
+      rearGravelMesh.receiveShadow = true;
+      envGroup.add(rearGravelMesh);
+
+      // Bordure béton continue longeant la bande de 1,00 m et l'angle à 45° vers la haie Est
+      const bWestWall   = planToUV(0.00, 0.00);
+      const bWestCorner = planToUV(0.00, -1.00);
+      const bEastCorner = planToUV(17.555, -1.00); // Intersection exacte z = -1,00 & u = -0,35 (v = -1,064)
+
+      addWallLineUV(bWestWall.u, bWestWall.v, bWestCorner.u, bWestCorner.v, 1, 0.13, 0.07, curbMat, 0.04);
+      addWallLineUV(bWestCorner.u, bWestCorner.v, bEastCorner.u, bEastCorner.v, 12, 0.13, 0.07, curbMat, 0.04);
+      addWallLineUV(-0.35, -2.85, bEastCorner.u, bEastCorner.v, 3, 0.13, 0.07, curbMat, 0.04);
     }
 
-    // 5. Bordure bois paysagère courbe devant la terrasse (visible photo drone)
-    const sleeperPts = [
-      planToUV(-0.5, 13.85),
-      planToUV(2.8,  14.20),
-      planToUV(6.2,  14.15),
-      planToUV(9.6,  14.60)
-    ];
-    for (let i = 0; i < sleeperPts.length - 1; i++) {
-      addWallLineUV(
-        sleeperPts[i].u, sleeperPts[i].v,
-        sleeperPts[i + 1].u, sleeperPts[i + 1].v,
-        1, 0.18, 0.12, woodBorderMat, 0.03
+    // 5. Délimitation nette gazon / gravier (fine bordurette droite de l'angle terrasse au muret Ouest)
+    addWallLineUV(-9.327, 19.88, -9.327, 23.02, 6, 0.07, 0.04, edgingMat, 0.05);
+
+    // 5b. Ligne en béton délimitant la zone voitures (de l'angle de la terrasse jusqu'à la limite du terrain)
+    const carZoneCurbStart = planToUV(12.96, 12.96); // Angle Sud-Est de la terrasse (u ≈ 6.27, v ≈ 12.06)
+    const carZoneCurbEnd   = { u: 6.68, v: 23.02 };  // Jonction exacte sur le mur de limite de terrain (v = 23.1)
+    function getCarZoneCurbU(v) {
+      const t = THREE.MathUtils.clamp(
+        (v - carZoneCurbStart.v) / (carZoneCurbEnd.v - carZoneCurbStart.v),
+        0,
+        1
+      );
+      return THREE.MathUtils.lerp(carZoneCurbStart.u, carZoneCurbEnd.u, t);
+    }
+    const carZoneCurbMat = new THREE.MeshStandardMaterial({ color: 0xd0d3d8, roughness: 0.82 });
+    addWallLineUV(
+      carZoneCurbStart.u, carZoneCurbStart.v,
+      carZoneCurbEnd.u,   carZoneCurbEnd.v,
+      16, 0.14, 0.11, carZoneCurbMat, 0.09
+    );
+
+    // 5c. Zones courbes de cailloux blancs (texture concassé clair + nappage fidèle au relief)
+    function createWhitePebbleTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ece9e1';
+      ctx.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 34000; i++) {
+        const v = 205 + Math.floor(Math.random() * 48);
+        ctx.fillStyle = `rgb(${v},${v - 2},${v - 7})`;
+        const sz = 1.5 + Math.random() * 2.2;
+        ctx.fillRect(Math.random() * 512, Math.random() * 512, sz, sz);
+      }
+      for (let i = 0; i < 6500; i++) {
+        const v = 165 + Math.floor(Math.random() * 35);
+        ctx.fillStyle = `rgba(${v},${v - 3},${v - 8},0.55)`;
+        ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    const whitePebbleMat = new THREE.MeshStandardMaterial({
+      map: createWhitePebbleTexture(),
+      roughness: 0.94,
+      metalness: 0.01
+    });
+
+    function addDrapedPebbleBed(sampleTopXZ, sampleBotXZ, cols = 34, rows = 7, yLift = 0.026) {
+      const pts = [];
+      for (let ir = 0; ir <= rows; ir++) {
+        const tr = ir / rows;
+        const row = [];
+        for (let ic = 0; ic <= cols; ic++) {
+          const tc = ic / cols;
+          const a = sampleTopXZ(tc);
+          const b = sampleBotXZ(tc);
+          const x = THREE.MathUtils.lerp(a.x, b.x, tr);
+          const z = THREE.MathUtils.lerp(a.y, b.y, tr);
+          const y = getTerrainHeight(x, z) + yLift;
+          row.push(new THREE.Vector3(x, y, z));
+        }
+        pts.push(row);
+      }
+
+      const pos = [], norm = [], uv = [];
+      const uvScale = 0.42;
+      const upDir = new THREE.Vector3(0, 1, 0);
+
+      const pushQuadUp = (p0, p1, p2, p3) => {
+        addOrientedTri(pos, norm, uv, p0, p1, p2, upDir, uvScale, true);
+        addOrientedTri(pos, norm, uv, p0, p2, p3, upDir, uvScale, true);
+      };
+
+      for (let ir = 0; ir < rows; ir++) {
+        for (let ic = 0; ic < cols; ic++) {
+          pushQuadUp(pts[ir][ic], pts[ir][ic + 1], pts[ir + 1][ic + 1], pts[ir + 1][ic]);
+        }
+      }
+
+      // Petit rebord périphérique descendant légèrement dans le sol pour un contour net
+      const pushEdgeSkirt = (ring) => {
+        for (let i = 0; i < ring.length - 1; i++) {
+          const t0 = ring[i];
+          const t1 = ring[i + 1];
+          const dx = t1.x - t0.x, dz = t1.z - t0.z;
+          if (Math.hypot(dx, dz) < 1e-4) continue;
+          const outN = new THREE.Vector3(dz, 0, -dx).normalize();
+          const b0 = new THREE.Vector3(t0.x, t0.y - 0.05, t0.z);
+          const b1 = new THREE.Vector3(t1.x, t1.y - 0.05, t1.z);
+          addOrientedTri(pos, norm, uv, b0, b1, t1, outN, uvScale);
+          addOrientedTri(pos, norm, uv, b0, t1, t0, outN, uvScale);
+        }
+      };
+      pushEdgeSkirt(pts[0]);
+      pushEdgeSkirt(pts[rows].slice().reverse());
+      pushEdgeSkirt(pts.map(r => r[cols]));
+      pushEdgeSkirt(pts.map(r => r[0]).reverse());
+
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geom.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
+      geom.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      const mesh = new THREE.Mesh(geom, whitePebbleMat);
+      mesh.receiveShadow = true;
+      envGroup.add(mesh);
+    }
+
+    // Massif supérieur de cailloux blancs longeant la terrasse jusqu'à la bordure béton
+    {
+      const curbTopHit = uvToPlan(getCarZoneCurbU(12.11) - 0.055, 12.11); // Angle terrasse / bordure
+      const curbUpperEnd = uvToPlan(getCarZoneCurbU(13.38) - 0.055, 13.38);
+      const upperBotCurve = new THREE.SplineCurve([
+        new THREE.Vector2(8.20, 12.96),
+        new THREE.Vector2(8.68, 13.52),
+        new THREE.Vector2(9.45, 13.86),
+        new THREE.Vector2(10.45, 13.98),
+        new THREE.Vector2(11.35, 13.94),
+        new THREE.Vector2(curbUpperEnd.x, curbUpperEnd.y)
+      ]);
+      addDrapedPebbleBed(
+        (t) => new THREE.Vector2(
+          THREE.MathUtils.lerp(8.20, curbTopHit.x, t),
+          12.96
+        ),
+        (t) => upperBotCurve.getPoint(t),
+        34, 6
+      );
+    }
+
+    // Grand massif inférieur-droit en vague S dans l'angle bordure béton / limite du terrain
+    {
+      const vStart = 17.45;
+      const vEnd   = 22.92;
+      const uTopOnCurb = getCarZoneCurbU(vStart) - 0.055;
+      const lowerWaveUV = new THREE.SplineCurve([
+        new THREE.Vector2(uTopOnCurb, vStart),
+        new THREE.Vector2(5.38, 17.68),
+        new THREE.Vector2(4.72, 18.30),
+        new THREE.Vector2(4.22, 19.35),
+        new THREE.Vector2(3.52, 20.42),
+        new THREE.Vector2(2.25, 21.35),
+        new THREE.Vector2(1.12, 22.08),
+        new THREE.Vector2(0.65, vEnd)
+      ]);
+      addDrapedPebbleBed(
+        (t) => {
+          const pUV = lowerWaveUV.getPoint(t);
+          return uvToPlan(pUV.x, pUV.y);
+        },
+        (t) => {
+          const pUV = lowerWaveUV.getPoint(t);
+          const uRight = getCarZoneCurbU(pUV.y) - 0.055;
+          return uvToPlan(uRight, pUV.y);
+        },
+        36, 8
+      );
+    }
+
+    // Petit croissant de cailloux blancs côté gauche devant la terrasse (vu sur la vue drone large)
+    {
+      const leftCrescentBot = new THREE.SplineCurve([
+        new THREE.Vector2(2.05, 12.96),
+        new THREE.Vector2(2.85, 13.58),
+        new THREE.Vector2(3.75, 13.72),
+        new THREE.Vector2(4.65, 13.52),
+        new THREE.Vector2(5.35, 12.96)
+      ]);
+      addDrapedPebbleBed(
+        (t) => new THREE.Vector2(THREE.MathUtils.lerp(2.05, 5.35, t), 12.96),
+        (t) => leftCrescentBot.getPoint(t),
+        22, 5
       );
     }
 
@@ -2086,19 +2368,137 @@
     addTreeUV(-18.5, -2.2, 1.25);
     addTreeUV(-19.0, 22.0, 1.15);
 
-    // Petits arbustes ornementaux dans les massifs de galets blancs devant la terrasse
-    [
-      planToUV(1.2, 13.6), planToUV(10.5, 13.6), planToUV(12.8, 13.4),
-      { u: 7.4, v: 21.8 }, { u: 8.8, v: 21.2 }, { u: 8.5, v: 22.4 }
-    ].forEach(({ u, v }) => {
-      const p = uvToPlan(u, v);
-      const y = getTerrainHeight(p.x, p.y);
-      const bush = new THREE.Mesh(new THREE.DodecahedronGeometry(0.32, 1), shrubMat);
-      bush.position.set(p.x, y + 0.24, p.y);
-      bush.scale.set(1.1, 0.78, 1.1);
-      bush.castShadow = true;
-      envGroup.add(bush);
+    // Miscanthus (graminées ornementales en fontaine) dans les massifs de cailloux blancs
+    const miscanthusBladeMat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.82,
+      metalness: 0.0,
+      side: THREE.DoubleSide
     });
+    const miscanthusPlumeMat = new THREE.MeshStandardMaterial({
+      color: 0xdccfb4,
+      roughness: 0.90,
+      side: THREE.DoubleSide
+    });
+
+    function addMiscanthus(x, z, scale = 1.0, seed = 1) {
+      const y = getTerrainHeight(x, z) + 0.02;
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+
+      let s = seed * 9301 + 49297;
+      const rand = () => {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+      };
+
+      const bPos = [], bCol = [];
+      const cBase = new THREE.Color(0x465b2b);
+      const cMid  = new THREE.Color(0x6c8244);
+      const cTipG = new THREE.Color(0x889958);
+      const cTipD = new THREE.Color(0xc2aa74);
+
+      const bladeCount = 34;
+      const segs = 4;
+
+      for (let i = 0; i < bladeCount; i++) {
+        const tier = i < 10 ? 0 : (i < 22 ? 1 : 2);
+        const angle = (i / bladeCount) * Math.PI * 2 + (rand() - 0.5) * 0.35;
+        const cosA = Math.cos(angle), sinA = Math.sin(angle);
+        const perpX = -sinA, perpZ = cosA;
+
+        const r0 = (0.02 + tier * 0.035 + rand() * 0.02) * scale;
+        const reach = (tier === 0 ? 0.24 : (tier === 1 ? 0.44 : 0.58)) * (0.85 + rand() * 0.32) * scale;
+        const maxH  = (tier === 0 ? 0.62 : (tier === 1 ? 0.52 : 0.38)) * (0.85 + rand() * 0.30) * scale;
+        const baseW = (0.026 + rand() * 0.012) * scale;
+        const tipColor = rand() > 0.42 ? cTipD : cTipG;
+
+        const ringL = [], ringR = [], ringC = [];
+        for (let k = 0; k <= segs; k++) {
+          const t = k / segs;
+          const r = r0 + reach * Math.pow(t, 0.85);
+          // Courbe en fontaine : monte franchement puis retombe légèrement vers l'extrémité
+          const h = maxH * Math.sin(t * Math.PI * (0.68 + tier * 0.08));
+          const w = baseW * (1 - t * 0.92);
+          const cx = cosA * r, cz = sinA * r;
+          ringL.push(new THREE.Vector3(cx - perpX * w, h, cz - perpZ * w));
+          ringR.push(new THREE.Vector3(cx + perpX * w, h, cz + perpZ * w));
+          const c = t < 0.5
+            ? cBase.clone().lerp(cMid, t * 2)
+            : cMid.clone().lerp(tipColor, (t - 0.5) * 2);
+          ringC.push(c);
+        }
+
+        for (let k = 0; k < segs; k++) {
+          const p0 = ringL[k], p1 = ringR[k], p2 = ringR[k + 1], p3 = ringL[k + 1];
+          const c0 = ringC[k], c1 = ringC[k + 1];
+          bPos.push(
+            p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z,
+            p0.x, p0.y, p0.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z
+          );
+          bCol.push(
+            c0.r, c0.g, c0.b, c0.r, c0.g, c0.b, c1.r, c1.g, c1.b,
+            c0.r, c0.g, c0.b, c1.r, c1.g, c1.b, c1.r, c1.g, c1.b
+          );
+        }
+      }
+
+      const bladeGeom = new THREE.BufferGeometry();
+      bladeGeom.setAttribute('position', new THREE.Float32BufferAttribute(bPos, 3));
+      bladeGeom.setAttribute('color', new THREE.Float32BufferAttribute(bCol, 3));
+      bladeGeom.computeVertexNormals();
+      const bladesMesh = new THREE.Mesh(bladeGeom, miscanthusBladeMat);
+      bladesMesh.castShadow = true;
+      bladesMesh.receiveShadow = true;
+      g.add(bladesMesh);
+
+      // Quelques plumeaux aériens beiges au cœur du miscanthus
+      for (let p = 0; p < 5; p++) {
+        const a = (p / 5) * Math.PI * 2 + rand() * 0.5;
+        const lean = (0.14 + rand() * 0.14) * scale;
+        const ph = (0.58 + rand() * 0.22) * scale;
+        const plume = new THREE.Mesh(new THREE.ConeGeometry(0.032 * scale, 0.20 * scale, 5), miscanthusPlumeMat);
+        plume.position.set(Math.cos(a) * lean, ph, Math.sin(a) * lean);
+        plume.rotation.z = -Math.cos(a) * 0.35;
+        plume.rotation.x =  Math.sin(a) * 0.35;
+        plume.castShadow = true;
+        g.add(plume);
+      }
+
+      envGroup.add(g);
+    }
+
+    // Implantation fidèle à la photo :
+    // 1) Massif supérieur (1 miscanthus central + petit arbuste taillé à l'angle terrasse/bordure)
+    addMiscanthus(10.10, 13.45, 1.05, 11);
+    {
+      const pCorner = uvToPlan(getCarZoneCurbU(12.55) - 0.28, 12.55);
+      const yC = getTerrainHeight(pCorner.x, pCorner.y) + 0.02;
+      const gTop = new THREE.Group();
+      gTop.position.set(pCorner.x, yC, pCorner.y);
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.22, 6), trunkMat);
+      st.position.y = 0.11; gTop.add(st);
+      const b1 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.24, 1), shrubMat);
+      b1.position.set(0.04, 0.26, 0.02); b1.scale.set(1.15, 0.72, 1.15); b1.castShadow = true; gTop.add(b1);
+      const b2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18, 1), leafMat2);
+      b2.position.set(-0.18, 0.22, -0.10); b2.scale.set(1.1, 0.72, 1.1); b2.castShadow = true; gTop.add(b2);
+      envGroup.add(gTop);
+    }
+
+    // 2) Massif inférieur-droit en vague S (4 miscanthus répartis comme sur la photo)
+    [
+      { u: 5.45, v: 19.35, s: 0.85, seed: 21 },
+      { u: 5.65, v: 22.05, s: 1.05, seed: 22 },
+      { u: 4.05, v: 21.45, s: 0.92, seed: 23 },
+      { u: 2.35, v: 22.10, s: 1.08, seed: 24 }
+    ].forEach(({ u, v, s, seed }) => {
+      const p = uvToPlan(u, v);
+      addMiscanthus(p.x, p.y, s, seed);
+    });
+
+    // 3) Petit croissant de cailloux blancs à gauche devant la terrasse (2 miscanthus)
+    addMiscanthus(3.05, 13.30, 0.78, 31);
+    addMiscanthus(4.45, 13.32, 0.74, 32);
 
     // Boussole Nord minimale placée dans la pelouse Nord-Ouest
     const compassPos = uvToPlan(-17.5, 19.5);
