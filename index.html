@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maquette 3D — Maison S (Commune de S) • Export STL / 3MF</title>
+  <title>Maquette 3D — Commune de S (Export STL &amp; 3MF)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,8 +12,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
       }
     }
   </script>
@@ -3974,27 +3974,43 @@
         addBedMesh(new THREE.CylinderGeometry(0.032, 0.032, 0.075, 12), candleMat, 0.105, 1.11, 0.0);
       }
 
-      // 2b. Petite lampe de chevet côté gauche (+Z) avec abat-jour naturel texturé
+      // 2b. Petite lampe de chevet côté gauche (+Z) à pied filaire noir, abat-jour tissé & pot bougie ambré
       {
-        const lampBaseMat = new THREE.MeshStandardMaterial({ color: 0x3b3530, roughness: 0.7 });
-        const lampShadeMat = new THREE.MeshStandardMaterial({ color: 0xb79b76, roughness: 0.85 });
-        addBedMesh(new THREE.CylinderGeometry(0.022, 0.042, 0.12, 10), lampBaseMat, 0.075, 1.13, 0.58);
-        addBedMesh(new THREE.CylinderGeometry(0.062, 0.078, 0.12, 14), lampShadeMat, 0.075, 1.23, 0.58);
+        const lampBaseMat = new THREE.MeshStandardMaterial({ color: 0x262422, roughness: 0.55, metalness: 0.35 });
+        const lampShadeMat = new THREE.MeshStandardMaterial({ color: 0xc2a378, roughness: 0.86 });
+        const cageGrp = new THREE.Group();
+        cageGrp.position.set(0.075, 1.07, 0.58);
+        ch3Bed.add(cageGrp);
+        // Pied filaire conique ajouré
+        for (let w = 0; w < 8; w++) {
+          const a = (w / 8) * Math.PI * 2;
+          const p0 = new THREE.Vector3(Math.cos(a) * 0.044, 0, Math.sin(a) * 0.044);
+          const p1 = new THREE.Vector3(Math.cos(a) * 0.018, 0.13, Math.sin(a) * 0.018);
+          const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, p0.distanceTo(p1), 6), lampBaseMat);
+          wire.position.copy(p0).add(p1).multiplyScalar(0.5);
+          wire.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p1.clone().sub(p0).normalize());
+          cageGrp.add(wire);
+        }
+        addBedMesh(new THREE.CylinderGeometry(0.062, 0.078, 0.125, 16), lampShadeMat, 0.075, 1.245, 0.58);
+
+        // Grand pot / bougie en verre brun ambré posé devant la lampe côté cadre
+        const amberJarMat = new THREE.MeshStandardMaterial({ color: 0x5c2d19, roughness: 0.24, metalness: 0.12 });
+        addBedMesh(new THREE.CylinderGeometry(0.044, 0.044, 0.115, 14), amberJarMat, 0.105, 1.128, 0.39);
       }
 
       // 2c. Deux petits vases blancs avec fleurs séchées de part et d'autre du cadre
-      const driedStemMat = new THREE.MeshStandardMaterial({ color: 0xdccbb0, roughness: 0.92 });
-      [-0.31, 0.31].forEach(vz => {
-        addBedMesh(new THREE.CylinderGeometry(0.020, 0.032, 0.11, 10), mCeramic, 0.08, 1.125, vz);
-        addBedMesh(new THREE.ConeGeometry(0.045, 0.14, 7), driedStemMat, 0.08, 1.24, vz, 0, 0, Math.PI);
+      const driedStemMat = new THREE.MeshStandardMaterial({ color: 0xe2d3ba, roughness: 0.92 });
+      [-0.28, 0.44].forEach(vz => {
+        addBedMesh(new THREE.CylinderGeometry(0.022, 0.032, 0.11, 10), mCeramic, 0.078, 1.125, vz);
+        addBedMesh(new THREE.ConeGeometry(0.055, 0.18, 7), driedStemMat, 0.078, 1.26, vz, 0, 0, Math.PI);
       });
 
-      // 2d. Petite sculpture / boîte à mouchoirs Moaï gris anthracite côté droit (-Z)
+      // 2d. Sculpture / boîte à mouchoirs Moaï gris anthracite côté droit (-Z) avec mouchoir blanc drapé
       {
-        const moaiMat = new THREE.MeshStandardMaterial({ color: 0x26292e, roughness: 0.72 });
-        addBedMesh(new THREE.BoxGeometry(0.10, 0.20, 0.11), moaiMat, 0.075, 1.17, -0.56);
-        addBedMesh(new THREE.BoxGeometry(0.04, 0.07, 0.035), moaiMat, 0.125, 1.18, -0.56);
-        addBedMesh(new THREE.ConeGeometry(0.035, 0.07, 6), mCeramic, 0.145, 1.12, -0.56, 0, 0, -0.6);
+        const moaiMat = new THREE.MeshStandardMaterial({ color: 0x2c3036, roughness: 0.72 });
+        addBedMesh(new THREE.BoxGeometry(0.11, 0.22, 0.115), moaiMat, 0.075, 1.18, -0.56);
+        addBedMesh(new THREE.BoxGeometry(0.048, 0.08, 0.036), moaiMat, 0.128, 1.19, -0.56);
+        addBedMesh(new THREE.ConeGeometry(0.048, 0.105, 7), mCeramic, 0.155, 1.125, -0.56, 0.12, 0, -0.55);
       }
 
       // 3. Tapis rond en jute tressé à motif médaillons posé au sol à gauche du lit
@@ -4194,38 +4210,57 @@
         body.receiveShadow = true;
         g.add(body);
 
-        const margin = borderMat === whiteWoodMat ? 0.006 : 0.028;
-        const art = new THREE.Mesh(new THREE.PlaneGeometry(width - margin, height - margin), frontMat);
-        art.position.z = depth * 0.5 + 0.002;
-        g.add(art);
+        const face = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.024, height - 0.024), frontMat);
+        face.position.z = depth * 0.5 + 0.002;
+        g.add(face);
         ch3Group.add(g);
       }
 
-      // Grand tableau « PRADA MARFA → » appuyé au sol contre le mur taupe-sable à gauche du lit
-      addLeaningFrame(
-        0.68, 0.48, 0.024, 3.68,
-        whiteWoodMat,
-        new THREE.MeshStandardMaterial({ map: createPradaMarfaTexture(), roughness: 0.72 }),
-        0.10
-      );
+      const pradaMat = new THREE.MeshStandardMaterial({ map: createPradaMarfaTexture(), roughness: 0.78 });
+      const quoteMat = new THREE.MeshStandardMaterial({ map: createSmallQuoteFrameTexture(), roughness: 0.78 });
+      const blackFrameMat = new THREE.MeshStandardMaterial({ color: 0x1d1f23, roughness: 0.55 });
+      const miniPhotoMat = new THREE.MeshStandardMaterial({ color: 0xd8c3b0, roughness: 0.75 });
 
-      // Petit cadre portrait intermédiaire posé au sol
-      addLeaningFrame(
-        0.13, 0.18, 0.016, 3.23,
-        new THREE.MeshStandardMaterial({ color: 0xcab89d, roughness: 0.75 }),
-        new THREE.MeshStandardMaterial({ color: 0x9b7e66, roughness: 0.80 }),
-        0.13
-      );
+      addLeaningFrame(0.68, 0.48, 0.024, 3.44, whiteWoodMat, pradaMat, 0.10);
+      addLeaningFrame(0.24, 0.32, 0.020, 2.94, blackFrameMat, quoteMat, 0.12);
+      addLeaningFrame(0.14, 0.18, 0.016, 3.09, whiteWoodMat, miniPhotoMat, 0.15);
 
-      // Petit cadre sombre avec typographie noire posé au sol près du côté gauche du lit
-      addLeaningFrame(
-        0.26, 0.34, 0.022, 2.99,
-        new THREE.MeshStandardMaterial({ color: 0x1b1d20, roughness: 0.50 }),
-        new THREE.MeshStandardMaterial({ map: createSmallQuoteFrameTexture(), roughness: 0.75 }),
-        0.11
-      );
+      // 6. Suspension plafonnier tambour blanc cassé ajouré / intérieur doré-cuivré métallisé
+      function createPerforatedDrumTexture() {
+        const w = 512, h = 128;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#f4f1ea';
+        ctx.fillRect(0, 0, w, h);
 
-      // 6. Suspension plafonnier tambour blanc cassé / intérieur doré-cuivré métallisé
+        // Motif ajouré fin en rangées de petites découpes en arceaux laissant deviner l'intérieur doré
+        const cols = 32;
+        const rows = 7;
+        const dx = w / cols;
+        const dy = (h - 16) / rows;
+        for (let r = 0; r < rows; r++) {
+          const offsetX = (r % 2) * (dx * 0.5);
+          const cy = 12 + r * dy;
+          for (let col = -1; col <= cols; col++) {
+            const cx = col * dx + offsetX;
+            ctx.fillStyle = '#b98f46';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 4.2, Math.PI, 0, false);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#8b6324';
+            ctx.fillRect(cx - 2.4, cy - 2.6, 4.8, 1.6);
+          }
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
+        tex.repeat.set(2, 1);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
       function createGoldFoilTexture() {
         const sz = 256;
         const c = document.createElement('canvas');
@@ -4258,9 +4293,10 @@
 
         const cordMat = new THREE.MeshStandardMaterial({ color: 0xf0eee8, roughness: 0.65 });
         const shadeOutMat = new THREE.MeshStandardMaterial({
-          color: 0xf4f1ea,
-          roughness: 0.85,
-          metalness: 0.02,
+          map: createPerforatedDrumTexture(),
+          color: 0xffffff,
+          roughness: 0.82,
+          metalness: 0.04,
           side: THREE.FrontSide
         });
         const shadeGoldMat = new THREE.MeshStandardMaterial({
@@ -4312,6 +4348,150 @@
 
         pendant.add(outerDrum, innerDrum, topRim, botRim, bulb);
         ch3Group.add(pendant);
+      }
+
+      // 7. CÔTÉ FACE AU LIT (AILE 45°) : COMMODE BLANCHE 3 TIROIRS + TV NOIRE, CHAMBRANLES BOIS CLAIR & FINITIONS
+      {
+        // Sous-repère local aligné avec les murs à 45° de la suite : (lx, ly, lz) === (u, y, v)
+        const ch3UV = new THREE.Group();
+        ch3UV.position.set(17.05, 0, 0);
+        ch3UV.rotation.y = -Math.PI / 4;
+        ch3Group.add(ch3UV);
+
+        const addCh3UVMesh = (geom, material, x, y, z, rx = 0, ry = 0, rz = 0, parent = ch3UV) => {
+          const m = new THREE.Mesh(geom, material);
+          m.position.set(x, y, z);
+          m.rotation.set(rx, ry, rz);
+          m.castShadow = true;
+          m.receiveShadow = true;
+          parent.add(m);
+          return m;
+        };
+
+        // Matériaux dédiés (commode BRIMNES, verre dépoli, TV noire, encadrements bois clair)
+        const frostedGlassMat = new THREE.MeshPhysicalMaterial({
+          color: 0xdbe3e6,
+          transparent: true,
+          opacity: 0.62,
+          roughness: 0.52,
+          metalness: 0.04
+        });
+        const drawerShadowMat = new THREE.MeshStandardMaterial({ color: 0x5c6368, roughness: 0.85 });
+        const tvChassisMat    = new THREE.MeshStandardMaterial({ color: 0x16181c, roughness: 0.42, metalness: 0.28 });
+        const tvScreenMat     = new THREE.MeshStandardMaterial({ color: 0x0c0f14, roughness: 0.10, metalness: 0.46 });
+        const naturalOakMat   = new THREE.MeshStandardMaterial({ color: 0xd4b68c, roughness: 0.68 });
+        const switchWhiteMat  = new THREE.MeshStandardMaterial({ color: 0xf6f6f3, roughness: 0.45 });
+        const darkSlotMat     = new THREE.MeshStandardMaterial({ color: 0x25282e, roughness: 0.55 });
+
+        // 7a. Commode blanche 3 tiroirs style BRIMNES (tiroir haut vitré dépoli) contre le mur NE 45° (v = 0,33)
+        //     Placée à gauche de la porte de la salle de bain parentale, face au pied du lit (+v)
+        {
+          const cU = 2.13, cV = 0.535, cW = 0.78, cH = 0.95, cD = 0.41;
+          const baseY = 0.008;
+
+          // Corps blanc & plinthe basse légèrement en retrait
+          addCh3UVMesh(new THREE.BoxGeometry(cW, cH - 0.07, cD - 0.02), whiteWoodMat, cU, baseY + 0.07 + (cH - 0.07) * 0.5, cV - 0.01);
+          addCh3UVMesh(new THREE.BoxGeometry(cW - 0.02, 0.07, cD - 0.05), whiteWoodMat, cU, baseY + 0.035, cV - 0.02);
+          // Plateau supérieur blanc
+          addCh3UVMesh(new THREE.BoxGeometry(cW + 0.008, 0.024, cD + 0.006), whiteWoodMat, cU, baseY + cH - 0.012, cV);
+
+          const frontZ = cV + cD * 0.5;
+
+          // Tiroir bas (y = 0,08..0,34) & tiroir central (y = 0,36..0,62) : panneaux blancs moulurés + poignées blanches
+          [baseY + 0.21, baseY + 0.49].forEach(dy => {
+            addCh3UVMesh(new THREE.BoxGeometry(cW - 0.02, 0.26, 0.018), whiteWoodMat, cU, dy, frontZ - 0.004);
+            addCh3UVMesh(new THREE.BoxGeometry(cW - 0.14, 0.16, 0.008), whiteRecessMat, cU, dy, frontZ + 0.004);
+            // Poignée barre blanche en haut de façade
+            addCh3UVMesh(new THREE.BoxGeometry(0.14, 0.014, 0.022), whiteWoodMat, cU, dy + 0.095, frontZ + 0.014);
+          });
+
+          // Tiroir supérieur (y = 0,64..0,90) : cadre blanc + vitre centrale dépolie translucide
+          const topY = baseY + 0.77;
+          const dw = cW - 0.02, dh = 0.25, rail = 0.044;
+          // Fond sombre intérieur visible par transparence derrière le verre dépoli
+          addCh3UVMesh(new THREE.BoxGeometry(dw - rail * 1.8, dh - rail * 1.8, 0.010), drawerShadowMat, cU, topY, frontZ - 0.016);
+          // 4 traverses du cadre blanc du tiroir vitré
+          addCh3UVMesh(new THREE.BoxGeometry(dw, rail, 0.018), whiteWoodMat, cU, topY + dh * 0.5 - rail * 0.5, frontZ - 0.004);
+          addCh3UVMesh(new THREE.BoxGeometry(dw, rail, 0.018), whiteWoodMat, cU, topY - dh * 0.5 + rail * 0.5, frontZ - 0.004);
+          addCh3UVMesh(new THREE.BoxGeometry(rail, dh, 0.018), whiteWoodMat, cU - dw * 0.5 + rail * 0.5, topY, frontZ - 0.004);
+          addCh3UVMesh(new THREE.BoxGeometry(rail, dh, 0.018), whiteWoodMat, cU + dw * 0.5 - rail * 0.5, topY, frontZ - 0.004);
+          // Panneau central en verre dépoli
+          const glassInset = new THREE.Mesh(new THREE.BoxGeometry(dw - rail * 1.9, dh - rail * 1.9, 0.008), frostedGlassMat);
+          glassInset.position.set(cU, topY, frontZ - 0.001);
+          ch3UV.add(glassInset);
+          // Poignée blanche du tiroir supérieur
+          addCh3UVMesh(new THREE.BoxGeometry(0.14, 0.014, 0.022), whiteWoodMat, cU, topY + dh * 0.5 - 0.022, frontZ + 0.014);
+
+          // 7b. Téléviseur écran plat noir posé sur la commode blanche, face au lit (+v)
+          const tvGrp = new THREE.Group();
+          tvGrp.position.set(cU - 0.01, baseY + cH, cV - 0.02);
+          tvGrp.rotation.y = 0.04; // Très légère orientation naturelle vers le lit
+          ch3UV.add(tvGrp);
+
+          // Pied en V / arche noir posé sur le plateau de la commode
+          addCh3UVMesh(new THREE.BoxGeometry(0.42, 0.012, 0.042), tvChassisMat, 0, 0.008,  0.075, 0, 0, 0, tvGrp);
+          addCh3UVMesh(new THREE.BoxGeometry(0.10, 0.012, 0.14),  tvChassisMat, -0.17, 0.008, 0.02, 0,  0.32, 0, tvGrp);
+          addCh3UVMesh(new THREE.BoxGeometry(0.10, 0.012, 0.14),  tvChassisMat,  0.17, 0.008, 0.02, 0, -0.32, 0, tvGrp);
+          addCh3UVMesh(new THREE.BoxGeometry(0.14, 0.075, 0.032), tvChassisMat, 0, 0.045, -0.02, 0, 0, 0, tvGrp);
+
+          // Châssis & dalle vitrée noire grand écran (0,90 × 0,53 m)
+          addCh3UVMesh(new THREE.BoxGeometry(0.90, 0.53, 0.030), tvChassisMat, 0, 0.335, -0.015, 0, 0, 0, tvGrp);
+          addCh3UVMesh(new THREE.BoxGeometry(0.875, 0.505, 0.008), tvScreenMat, 0, 0.335,  0.002, 0, 0, 0, tvGrp);
+        }
+
+        // 7c. Encadrements / chambranles en bois naturel clair des portes à galandage (Bains parentale & Dressing)
+        //     Sur la cloison u = 2,70 (pure finition décorative dans furnitureGroup, sans toucher aux murs porteurs)
+        function addWoodDoorCasing(v0, v1, addPocketEdge = false) {
+          const trimW = 0.076;
+          const trimT = 0.016;
+          const doorH = 2.04;
+          const openW = v1 - v0;
+          const vMid = (v0 + v1) * 0.5;
+          const uFace = 2.652; // Face côté Chambre 3 de la cloison (u = 2,66)
+
+          // Montants verticaux & linteau bois naturel côté Chambre 3
+          addCh3UVMesh(new THREE.BoxGeometry(trimT, doorH + trimW, trimW), naturalOakMat, uFace, 0.008 + (doorH + trimW) * 0.5, v0 - trimW * 0.5);
+          addCh3UVMesh(new THREE.BoxGeometry(trimT, doorH + trimW, trimW), naturalOakMat, uFace, 0.008 + (doorH + trimW) * 0.5, v1 + trimW * 0.5);
+          addCh3UVMesh(new THREE.BoxGeometry(trimT, trimW, openW + trimW * 2), naturalOakMat, uFace, 0.008 + doorH + trimW * 0.5, vMid);
+
+          // Habillage intérieur de l'embrasure (épaisseur cloison 0,08 m)
+          addCh3UVMesh(new THREE.BoxGeometry(0.088, doorH, 0.014), naturalOakMat, 2.70, 0.008 + doorH * 0.5, v0 + 0.007);
+          addCh3UVMesh(new THREE.BoxGeometry(0.088, doorH, 0.014), naturalOakMat, 2.70, 0.008 + doorH * 0.5, v1 - 0.007);
+          addCh3UVMesh(new THREE.BoxGeometry(0.088, 0.014, openW), naturalOakMat, 2.70, 0.008 + doorH - 0.007, vMid);
+
+          // Tranche visible de la porte coulissante blanche rentrée dans le galandage (poignée cuvette chromée)
+          if (addPocketEdge) {
+            addCh3UVMesh(new THREE.BoxGeometry(0.040, doorH - 0.02, 0.032), whiteWoodMat, 2.70, 0.008 + doorH * 0.5, v1 - 0.030);
+            const pull = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.044, 12), mat.chrome);
+            pull.rotation.z = Math.PI / 2;
+            pull.position.set(2.70, 1.02, v1 - 0.038);
+            ch3UV.add(pull);
+          }
+        }
+
+        addWoodDoorCasing(0.68, 1.51, false); // Accès Salle de bain parentale (gauche sur la photo)
+        addWoodDoorCasing(2.76, 3.62, true);  // Accès Dressing (centre sur la photo)
+
+        // 7d. Thermostat / interrupteurs blancs superposés sur le mur à gauche du dressing (u = 2,654, v = 2,52)
+        addCh3UVMesh(new THREE.BoxGeometry(0.014, 0.082, 0.082), switchWhiteMat, 2.654, 1.32, 2.52);
+        addCh3UVMesh(new THREE.BoxGeometry(0.012, 0.082, 0.082), switchWhiteMat, 2.654, 1.15, 2.52);
+
+        // Double interrupteur blanc près de la porte d'entrée de la chambre (mur Ouest/Sud)
+        const entrySw = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.145, 0.082), switchWhiteMat);
+        entrySw.position.set(14.626, 1.15, 4.06);
+        ch3Group.add(entrySw);
+
+        // 7e. Grille de ventilation rectangulaire blanche au plafond près de la porte d'entrée
+        const ventGrp = new THREE.Group();
+        ventGrp.position.set(14.94, 2.494, 4.16);
+        ventGrp.rotation.y = -0.56;
+        ch3Group.add(ventGrp);
+        ventGrp.add(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.012, 0.11), switchWhiteMat));
+        for (let k = -2; k <= 2; k++) {
+          const slat = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.014, 0.010), darkSlotMat);
+          slat.position.set(0, -0.002, k * 0.018);
+          ventGrp.add(slat);
+        }
       }
     }
 
@@ -5583,17 +5763,694 @@
 
     buildPieceDeVieInterior();
 
-    // Bains parentale, Dressing & Cellier (orientés à 45°)
-    const shPt = uvToPlan(4.90, 1.05);
-    addFurnBox(0.95, 0.08, 1.35, shPt.x, 0.04, shPt.y, mCeramic, -Math.PI / 4);
-    const vanPt = uvToPlan(3.35, 1.50);
-    addFurnBox(0.90, 0.82, 0.48, vanPt.x, 0.41, vanPt.y, mCabinet, -Math.PI / 4);
+    // =========================================================================
+    // 10C-BIS. AMÉNAGEMENT INTÉRIEUR PERSONNALISÉ DE LA SALLE DE BAIN PARENTALE (4,58 m²)
+    //          À côté de la Chambre 3 (u = 2.74..5.56, v = 0.32..1.92)
+    //          Appartient uniquement à furnitureGroup (masquable & exclu STL/3MF)
+    // =========================================================================
+    function buildBainsParentaleInterior() {
+      const sdbGroup = new THREE.Group();
+      furnitureGroup.add(sdbGroup);
+
+      // Sous-repère local aligné sur l'aile à 45° : (lx, ly, lz) === (u, y, v)
+      const sdbUV = new THREE.Group();
+      sdbUV.position.set(17.05, 0, 0);
+      sdbUV.rotation.y = -Math.PI / 4;
+      sdbGroup.add(sdbUV);
+
+      const addSdbMesh = (geom, material, x, y, z, rx = 0, ry = 0, rz = 0, parent = sdbUV) => {
+        const m = new THREE.Mesh(geom, material);
+        m.position.set(x, y, z);
+        m.rotation.set(rx, ry, rz);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        parent.add(m);
+        return m;
+      };
+
+      // --- Textures procédurales dédiées à la salle de bain parentale ---
+      function createBleachedOakTexture() {
+        const sz = 256;
+        const c = document.createElement('canvas');
+        c.width = sz; c.height = sz;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#d8c5ad';
+        ctx.fillRect(0, 0, sz, sz);
+        let seed = 31947;
+        const rand = () => {
+          seed = (seed * 1664525 + 1013904223) >>> 0;
+          return seed / 4294967296;
+        };
+        for (let i = 0; i < 190; i++) {
+          const y = rand() * sz;
+          ctx.fillStyle = rand() > 0.45 ? 'rgba(246,237,224,0.28)' : 'rgba(156,132,106,0.16)';
+          ctx.fillRect(0, y, sz, 1 + rand() * 2.2);
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(1.6, 1.6);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
+      function createWavyTileTexture() {
+        const sz = 256;
+        const c = document.createElement('canvas');
+        c.width = sz; c.height = sz;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#f6f7f8';
+        ctx.fillRect(0, 0, sz, sz);
+        // Fines vagues horizontales en relief doux (faïence blanche ondulée & vasque)
+        for (let y = 0; y < sz; y++) {
+          const wave = Math.sin((y / sz) * Math.PI * 16) * 10;
+          const v = Math.round(240 + wave);
+          ctx.fillStyle = `rgb(${v},${v + 1},${v + 3})`;
+          ctx.fillRect(0, y, sz, 1);
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 2);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
+      function createShowerWallTileTexture() {
+        const sz = 256;
+        const c = document.createElement('canvas');
+        c.width = sz; c.height = sz;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#eef0f2';
+        ctx.fillRect(0, 0, sz, sz);
+        ctx.strokeStyle = 'rgba(180, 186, 194, 0.45)';
+        ctx.lineWidth = 2;
+        for (let y = 0; y <= sz; y += 64) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(sz, y); ctx.stroke();
+        }
+        for (let x = 0; x <= sz; x += 128) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, sz); ctx.stroke();
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(3, 4);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
+      function createBathMatTexture() {
+        const w = 256, h = 192;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#f4f4f2';
+        ctx.fillRect(0, 0, w, h);
+
+        // Motif treillis losanges noirs façon tapis de bain berbère de la photo
+        ctx.strokeStyle = '#181a1e';
+        ctx.lineWidth = 6.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const step = 36;
+        for (let x = -h; x < w + h; x += step) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + h, h); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x + h, 0); ctx.stroke();
+        }
+        // Bordure périphérique noire nette
+        ctx.lineWidth = 7;
+        ctx.strokeRect(5, 5, w - 10, h - 10);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 8;
+        return tex;
+      }
+
+      // Matériaux dédiés
+      const blackMatteMat   = new THREE.MeshStandardMaterial({ color: 0x1a1d21, roughness: 0.42, metalness: 0.25 });
+      const cabinetBlackMat = new THREE.MeshStandardMaterial({ color: 0x1d2025, roughness: 0.36, metalness: 0.14 });
+      const oakLightMat     = new THREE.MeshStandardMaterial({ map: createBleachedOakTexture(), roughness: 0.62 });
+      const wavyCeramicMat  = new THREE.MeshStandardMaterial({ map: createWavyTileTexture(), roughness: 0.24, metalness: 0.04 });
+      const showerTileMat   = new THREE.MeshStandardMaterial({ map: createShowerWallTileTexture(), roughness: 0.45 });
+      const trayWhiteMat    = new THREE.MeshStandardMaterial({ color: 0xf7f7f5, roughness: 0.32 });
+      const whiteFrameMat   = new THREE.MeshStandardMaterial({ color: 0xf6f6f3, roughness: 0.42 });
+      const mirrorGlassMat  = new THREE.MeshStandardMaterial({ color: 0xdbe4ee, roughness: 0.05, metalness: 0.94 });
+      const towelBrownMat   = new THREE.MeshStandardMaterial({ color: 0x564b45, roughness: 0.96 });
+      const towelTrimMat    = new THREE.MeshStandardMaterial({ color: 0x74675e, roughness: 0.95 });
+      const wovenPotMat     = new THREE.MeshStandardMaterial({ color: 0xb98a42, roughness: 0.86 });
+      const showerGlassMat  = new THREE.MeshPhysicalMaterial({
+        color: 0xdcebf4,
+        transparent: true,
+        opacity: 0.28,
+        roughness: 0.06,
+        metalness: 0.10,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      });
+
+      // -----------------------------------------------------------------------
+      // 1. GRANDE DOUCHE À L'ITALIENNE AU FOND (u = 4,64..5,55, v = 0,33..1,91)
+      // -----------------------------------------------------------------------
+      // Receveur extra-plat blanc pleine largeur + bonde inox
+      addSdbMesh(new THREE.BoxGeometry(0.91, 0.036, 1.58), trayWhiteMat, 5.095, 0.025, 1.12);
+      addSdbMesh(new THREE.BoxGeometry(0.11, 0.006, 0.11), mat.chrome, 5.18, 0.045, 1.12);
+
+      // Faïence murale blanche sur les 3 parois de la douche
+      addSdbMesh(new THREE.BoxGeometry(0.010, 2.45, 1.58), showerTileMat, 5.552, 1.265, 1.12); // Fond (côté garage)
+      addSdbMesh(new THREE.BoxGeometry(0.92,  2.45, 0.010), showerTileMat, 5.095, 1.265, 1.912); // Mur droit (côté Dressing)
+      addSdbMesh(new THREE.BoxGeometry(0.92,  2.45, 0.010), showerTileMat, 5.095, 1.265, 0.328); // Mur gauche (côté NE)
+
+      // Paroi de douche vitrée transparente avec profilés noir mat & volet retour pivotant (u = 4,65)
+      {
+        const pH = 2.02;
+        const pY = 0.044 + pH * 0.5;
+        // Panneau fixe droit (v = 1,06..1,91)
+        const fixedGlass = new THREE.Mesh(new THREE.BoxGeometry(0.010, pH, 0.84), showerGlassMat);
+        fixedGlass.position.set(4.65, pY, 1.485);
+        sdbUV.add(fixedGlass);
+
+        // Profilés noir mat : montant mural droit, montant central vertical, rail bas & barre de renfort haute
+        addSdbMesh(new THREE.BoxGeometry(0.028, pH + 0.01, 0.028), blackMatteMat, 4.65, pY, 1.902);
+        addSdbMesh(new THREE.BoxGeometry(0.036, pH + 0.02, 0.036), blackMatteMat, 4.65, pY, 1.060);
+        addSdbMesh(new THREE.BoxGeometry(0.026, 0.024, 0.86),      blackMatteMat, 4.65, 0.054, 1.485);
+        // Barre de stabilisation noire en haut reliant le montant central au mur du fond
+        addSdbMesh(new THREE.BoxGeometry(0.90,  0.022, 0.022),     blackMatteMat, 5.10, 2.04, 1.060);
+
+        // Volet vitré pivotant gauche légèrement replié vers la douche (comme sur la photo)
+        const swingGrp = new THREE.Group();
+        swingGrp.position.set(4.65, 0.044, 1.055);
+        swingGrp.rotation.y = 0.24;
+        sdbUV.add(swingGrp);
+        const swingW = 0.36;
+        const swingPane = new THREE.Mesh(new THREE.BoxGeometry(0.008, pH - 0.02, swingW), showerGlassMat);
+        swingPane.position.set(0, pH * 0.5, -swingW * 0.5);
+        swingGrp.add(swingPane);
+        addSdbMesh(new THREE.BoxGeometry(0.022, 0.020, swingW), blackMatteMat, 0, 0.012, -swingW * 0.5, 0, 0, 0, swingGrp);
+      }
+
+      // Colonne de douche noire mate (mur droit) avec pomme pluie carrée noire & paniers de douche
+      {
+        // Colonne verticale, mitigeur thermostatique & bras supérieur coudé avec grande tête carrée
+        addSdbMesh(new THREE.CylinderGeometry(0.012, 0.012, 1.24, 10), blackMatteMat, 5.08, 1.62, 1.87);
+        addSdbMesh(new THREE.BoxGeometry(0.24, 0.045, 0.08),           blackMatteMat, 5.08, 1.04, 1.85);
+        addSdbMesh(new THREE.CylinderGeometry(0.012, 0.012, 0.42, 10), blackMatteMat, 5.08, 2.24, 1.67, Math.PI / 2, 0, 0);
+        addSdbMesh(new THREE.BoxGeometry(0.26, 0.018, 0.26),           blackMatteMat, 5.08, 2.19, 1.48); // Pomme de douche carrée
+        addSdbMesh(new THREE.CylinderGeometry(0.016, 0.016, 0.16, 8),  blackMatteMat, 5.08, 2.22, 1.48);
+        // Douchette à main sur support
+        addSdbMesh(new THREE.CylinderGeometry(0.018, 0.012, 0.18, 8),  blackMatteMat, 4.94, 1.38, 1.84, 0, 0, 0.22);
+
+        // 2 paniers de douche filaires noirs garnis de flacons sur la paroi droite
+        [1.34, 1.64].forEach((py, idx) => {
+          addSdbMesh(new THREE.BoxGeometry(0.24, 0.06, 0.11), blackMatteMat, 5.36, py, 1.84);
+          addSdbMesh(new THREE.CylinderGeometry(0.024, 0.024, 0.14, 10), whiteFrameMat, 5.31, py + 0.08, 1.84);
+          addSdbMesh(
+            new THREE.CylinderGeometry(0.022, 0.022, 0.12, 10),
+            new THREE.MeshStandardMaterial({ color: idx === 0 ? 0x5c85b5 : 0xd47a6a, roughness: 0.45 }),
+            5.40, py + 0.07, 1.84
+          );
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // 2. TAPIS DE BAIN BERBÈRE BLANC À LOSANGES NOIRS DEVANT LA DOUCHE
+      // -----------------------------------------------------------------------
+      {
+        const matTop = new THREE.MeshStandardMaterial({ map: createBathMatTexture(), roughness: 0.96 });
+        const matEdge = new THREE.MeshStandardMaterial({ color: 0xf2f2ef, roughness: 0.96 });
+        const bathMat = new THREE.Mesh(
+          new THREE.BoxGeometry(0.54, 0.014, 0.76),
+          [matEdge, matEdge, matTop, matEdge, matEdge, matEdge]
+        );
+        bathMat.position.set(4.30, 0.014, 0.78);
+        bathMat.receiveShadow = true;
+        sdbUV.add(bathMat);
+
+        // Petits pompons blancs sur les deux petits côtés du tapis (comme sur la photo)
+        for (let k = 0; k < 5; k++) {
+          const tu = 4.08 + k * 0.11;
+          addSdbMesh(new THREE.SphereGeometry(0.018, 7, 6), matEdge, tu, 0.014, 1.18);
+          addSdbMesh(new THREE.SphereGeometry(0.018, 7, 6), matEdge, tu, 0.014, 0.38);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 3. MUR DROIT (v = 1,92) : MEUBLE VASQUE NOIR & BOIS + COLONNE CHÊNE + PLANTE + MIROIR
+      // -----------------------------------------------------------------------
+      // 3a. Meuble vasque suspendu noir mat + plan de travail chêne clair blanchi (u = 2,82..3,94)
+      {
+        const vU = 3.38, vW = 1.12, vD = 0.48;
+        const vZ = 1.915 - vD * 0.5;
+        addSdbMesh(new THREE.BoxGeometry(vW, 0.52, vD), cabinetBlackMat, vU, 0.54, vZ);
+        // 2 grands tiroirs horizontaux noir mat avec gorge fine
+        addSdbMesh(new THREE.BoxGeometry(vW - 0.01, 0.245, 0.018), cabinetBlackMat, vU, 0.41, vZ - vD * 0.5 - 0.006);
+        addSdbMesh(new THREE.BoxGeometry(vW - 0.01, 0.245, 0.018), cabinetBlackMat, vU, 0.67, vZ - vD * 0.5 - 0.006);
+        // Plan de travail chêne clair blanchi épais
+        addSdbMesh(new THREE.BoxGeometry(vW + 0.01, 0.046, vD + 0.02), oakLightMat, vU, 0.823, vZ - 0.005);
+
+        // Vasque carrée blanche à poser à relief ondulé + cuve + mitigeur noir mat
+        const sinkU = 3.34, sinkV = vZ - 0.01;
+        addSdbMesh(new THREE.BoxGeometry(0.44, 0.145, 0.42), wavyCeramicMat, sinkU, 0.918, sinkV);
+        addSdbMesh(new THREE.BoxGeometry(0.37, 0.018, 0.35), trayWhiteMat,   sinkU, 0.986, sinkV); // Intérieur cuve
+        addSdbMesh(new THREE.CylinderGeometry(0.022, 0.022, 0.010, 12), mat.chrome, sinkU, 0.996, sinkV);
+        // Mitigeur haut noir mat derrière la vasque
+        addSdbMesh(new THREE.CylinderGeometry(0.018, 0.022, 0.22, 12), blackMatteMat, sinkU, 0.955, 1.86);
+        addSdbMesh(new THREE.CylinderGeometry(0.013, 0.013, 0.14, 10), blackMatteMat, sinkU, 1.045, 1.80, Math.PI / 2 + 0.18, 0, 0);
+        addSdbMesh(new THREE.BoxGeometry(0.022, 0.014, 0.08),          blackMatteMat, sinkU + 0.02, 1.065, 1.86);
+
+        // Crédence en faïence blanche ondulée entre le plan de travail et le miroir
+        addSdbMesh(new THREE.BoxGeometry(vW, 0.56, 0.012), wavyCeramicMat, vU, 1.125, 1.912);
+
+        // Grand miroir rectangulaire à fin cadre blanc au-dessus de la crédence (y = 1,42..2,10)
+        const mirGrp = new THREE.Group();
+        mirGrp.position.set(vU, 1.76, 1.904);
+        sdbUV.add(mirGrp);
+        const mW = 1.10, mH = 0.68, bar = 0.024;
+        addSdbMesh(new THREE.BoxGeometry(mW, bar, 0.022), whiteFrameMat, 0,  mH * 0.5 - bar * 0.5, 0, 0, 0, 0, mirGrp);
+        addSdbMesh(new THREE.BoxGeometry(mW, bar, 0.022), whiteFrameMat, 0, -mH * 0.5 + bar * 0.5, 0, 0, 0, 0, mirGrp);
+        addSdbMesh(new THREE.BoxGeometry(bar, mH, 0.022), whiteFrameMat, -mW * 0.5 + bar * 0.5, 0, 0, 0, 0, 0, mirGrp);
+        addSdbMesh(new THREE.BoxGeometry(bar, mH, 0.022), whiteFrameMat,  mW * 0.5 - bar * 0.5, 0, 0, 0, 0, 0, mirGrp);
+        const mirGlass = new THREE.Mesh(new THREE.BoxGeometry(mW - bar * 1.8, mH - bar * 1.8, 0.008), mirrorGlassMat);
+        mirGlass.position.z = -0.004;
+        mirGrp.add(mirGlass);
+      }
+
+      // 3b. Meuble bas / banc noir mat (u = 3,94..4,63) + colonne haute chêne clair blanchi + plante verte
+      {
+        // Banc / caisson bas noir mat prolongeant le meuble vasque jusqu'à la paroi de douche
+        const bW = 0.69, bH = 0.42, bD = 0.42;
+        const bU = 4.285, bV = 1.915 - bD * 0.5;
+        addSdbMesh(new THREE.BoxGeometry(bW, bH, bD), cabinetBlackMat, bU, 0.008 + bH * 0.5, bV);
+        addSdbMesh(new THREE.BoxGeometry(bW - 0.01, bH - 0.03, 0.016), cabinetBlackMat, bU, 0.008 + bH * 0.5, bV - bD * 0.5 - 0.005);
+
+        // Colonne haute bois chêne blanchi posée sur le meuble bas noir (u = 3,96..4,36, y = 0,43..2,02)
+        const cW = 0.38, cD = 0.35, cU = 4.15, cV = 1.915 - cD * 0.5;
+        // Partie haute fermée (porte chêne clair, y = 1,10..2,02)
+        addSdbMesh(new THREE.BoxGeometry(cW, 0.92, cD), oakLightMat, cU, 1.56, cV);
+        // Partie basse ouverte (2 niches de rangement visibles côté douche/face avant, y = 0,43..1,10)
+        addSdbMesh(new THREE.BoxGeometry(0.022, 0.67, cD), oakLightMat, cU - cW * 0.5 + 0.011, 0.765, cV); // Flanc côté vasque
+        addSdbMesh(new THREE.BoxGeometry(0.022, 0.67, cD), oakLightMat, cU + cW * 0.5 - 0.011, 0.765, cV); // Flanc côté douche
+        addSdbMesh(new THREE.BoxGeometry(cW, 0.67, 0.018), oakLightMat, cU, 0.765, 1.906);                  // Fond
+        addSdbMesh(new THREE.BoxGeometry(cW, 0.022, cD),   oakLightMat, cU, 0.439, cV);                     // Base
+        addSdbMesh(new THREE.BoxGeometry(cW, 0.022, cD),   oakLightMat, cU, 0.765, cV);                     // Tablette intermédiaire
+
+        // Plante verte touffue en pot osier tressé doré posée au sommet de la colonne bois (y = 2,02)
+        const plantGrp = new THREE.Group();
+        plantGrp.position.set(cU, 2.02, cV - 0.01);
+        sdbUV.add(plantGrp);
+        addSdbMesh(new THREE.CylinderGeometry(0.088, 0.070, 0.13, 14), wovenPotMat, 0, 0.065, 0, 0, 0, 0, plantGrp);
+        const bladeMats = [
+          new THREE.MeshStandardMaterial({ color: 0x2e5e26, roughness: 0.72, side: THREE.DoubleSide }),
+          new THREE.MeshStandardMaterial({ color: 0x3f7531, roughness: 0.68, side: THREE.DoubleSide }),
+          new THREE.MeshStandardMaterial({ color: 0x558c3c, roughness: 0.66, side: THREE.DoubleSide })
+        ];
+        for (let i = 0; i < 28; i++) {
+          const ang = (i / 28) * Math.PI * 2;
+          const ring = i % 3;
+          const tilt = 0.18 + ring * 0.24;
+          const len = 0.28 + (i % 4) * 0.045;
+          const blade = new THREE.Mesh(new THREE.ConeGeometry(0.014, len, 4), bladeMats[i % 3]);
+          blade.position.set(
+            Math.cos(ang) * (0.02 + ring * 0.028),
+            0.12 + len * 0.42 * Math.cos(tilt),
+            Math.sin(ang) * (0.02 + ring * 0.028)
+          );
+          blade.rotation.z = -Math.cos(ang) * tilt;
+          blade.rotation.x =  Math.sin(ang) * tilt;
+          blade.castShadow = true;
+          plantGrp.add(blade);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 4. MUR GAUCHE (v = 0,32) : SÈCHE-SERVIETTES BLANC + GRANDE SERVIETTE MARRON/TAUPE
+      // -----------------------------------------------------------------------
+      {
+        const radU = 3.24, radV = 0.385;
+        // 2 montants verticaux + 14 barres horizontales blanches du sèche-serviettes mural
+        [-0.23, 0.23].forEach(du => {
+          addSdbMesh(new THREE.CylinderGeometry(0.016, 0.016, 1.36, 10), whiteFrameMat, radU + du, 1.18, radV);
+        });
+        for (let r = 0; r < 14; r++) {
+          const ry = 0.56 + r * 0.092;
+          addSdbMesh(new THREE.CylinderGeometry(0.009, 0.009, 0.46, 8), whiteFrameMat, radU, ry, radV, 0, 0, Math.PI / 2);
+        }
+
+        // Grande serviette de bain épaisse marron/taupe drapée sur le sèche-serviettes (premier plan gauche de la photo)
+        const towelGrp = new THREE.Group();
+        towelGrp.position.set(radU - 0.02, 1.24, radV + 0.055);
+        sdbUV.add(towelGrp);
+        // Pan principal drapé avec 3 plis verticaux souples + liteau beige/taupe clair
+        [
+          { du: -0.14, dv:  0.012, w: 0.16, h: 1.12, ry:  0.14 },
+          { du:  0.00, dv:  0.024, w: 0.20, h: 1.18, ry: -0.06 },
+          { du:  0.13, dv:  0.008, w: 0.17, h: 1.06, ry: -0.18 }
+        ].forEach(f => {
+          const fold = new THREE.Mesh(new THREE.CylinderGeometry(f.w * 0.32, f.w * 0.42, f.h, 12), towelBrownMat);
+          fold.scale.set(1.3, 1.0, 0.55);
+          fold.position.set(f.du, 0, f.dv);
+          fold.rotation.y = f.ry;
+          fold.castShadow = true;
+          fold.receiveShadow = true;
+          towelGrp.add(fold);
+        });
+        // Bandeau de bordure taupe clair sur le drapé
+        addSdbMesh(new THREE.BoxGeometry(0.42, 0.055, 0.085), towelTrimMat, 0.0, -0.34, 0.018, 0, 0.05, 0.08, towelGrp);
+      }
+
+      // -----------------------------------------------------------------------
+      // 5. SPOT LED ENCASTRÉ AU PLAFOND (ALLUMÉ EN MODE NUIT)
+      // -----------------------------------------------------------------------
+      {
+        const sdbSpotMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: 0xffe8c2,
+          emissiveIntensity: 0.35,
+          roughness: 0.2
+        });
+        carNightGlowMats.push({ mat: sdbSpotMat, day: 0.35, night: 2.8 });
+        [
+          [3.55, 1.12],
+          [4.95, 1.12]
+        ].forEach(([su, sv]) => {
+          const trim = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.008, 14), whiteFrameMat);
+          trim.position.set(su, 2.495, sv);
+          const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.010, 12), sdbSpotMat);
+          lens.position.set(su, 2.493, sv);
+          sdbUV.add(trim, lens);
+        });
+      }
+    }
+
+    buildBainsParentaleInterior();
+
+    // Dressing (orienté à 45°)
     const drPt1 = uvToPlan(4.15, 2.32);
     const drPt2 = uvToPlan(4.15, 4.05);
     addFurnBox(2.45, 2.15, 0.50, drPt1.x, 1.075, drPt1.y, mCabinet, -Math.PI / 4);
     addFurnBox(2.45, 2.15, 0.50, drPt2.x, 1.075, drPt2.y, mCabinet, -Math.PI / 4);
-    const celPt = uvToPlan(4.25, 4.82);
-    addFurnBox(1.30, 0.85, 0.60, celPt.x, 0.425, celPt.y, mCeramic, -Math.PI / 4);
+
+    // =========================================================================
+    // 10D. AMÉNAGEMENT INTÉRIEUR PERSONNALISÉ DU CELLIER (7,98 m²)
+    //      Adapté d'après la photo (sans modifier la structure ni les exports)
+    //      Appartient uniquement à furnitureGroup (masquable & exclu STL/3MF)
+    // =========================================================================
+    function buildCellierInterior() {
+      const celGroup = new THREE.Group();
+      furnitureGroup.add(celGroup);
+
+      // Sous-repère local aligné avec l'aile à 45° : (lx, ly, lz) === (u, y, v)
+      const celUV = new THREE.Group();
+      celUV.position.set(17.05, 0, 0);
+      celUV.rotation.y = -Math.PI / 4;
+      celGroup.add(celUV);
+
+      const addCelMesh = (geom, material, x, y, z, rx = 0, ry = 0, rz = 0, parent = celUV) => {
+        const m = new THREE.Mesh(geom, material);
+        m.position.set(x, y, z);
+        m.rotation.set(rx, ry, rz);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        parent.add(m);
+        return m;
+      };
+
+      // --- Textures procédurales dédiées au Cellier ---
+      function createCellierOakTexture() {
+        const sz = 256;
+        const c = document.createElement('canvas');
+        c.width = sz; c.height = sz;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#bc9468';
+        ctx.fillRect(0, 0, sz, sz);
+        let seed = 53197;
+        const rand = () => {
+          seed = (seed * 1664525 + 1013904223) >>> 0;
+          return seed / 4294967296;
+        };
+        for (let i = 0; i < 160; i++) {
+          const y = rand() * sz;
+          ctx.fillStyle = rand() > 0.45 ? 'rgba(226,196,158,0.22)' : 'rgba(116,84,52,0.20)';
+          ctx.fillRect(0, y, sz, 1.2 + rand() * 2.5);
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2.0, 1.0);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
+      function createFridgeFrontTexture() {
+        const w = 256, h = 512;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+
+        // Fond inox brossé gris foncé
+        const grad = ctx.createLinearGradient(0, 0, w, 0);
+        grad.addColorStop(0.0, '#4f555d');
+        grad.addColorStop(0.35, '#6b727c');
+        grad.addColorStop(0.7, '#585f68');
+        grad.addColorStop(1.0, '#454a52');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Fines stries horizontales inox brossé
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+
+        // Séparation porte frigo / porte congélateur en bas
+        ctx.fillStyle = '#1f2328';
+        ctx.fillRect(0, 326, w, 8);
+
+        // Dessin enfant blanc en haut de la porte
+        ctx.fillStyle = '#f2f0ec';
+        ctx.fillRect(14, 14, 150, 74);
+        ctx.fillStyle = 'rgba(166, 98, 92, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(90, 52, 46, 22, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bandeau planning / magnets colorés
+        const stripCols = ['#8bc34a', '#ffeb3b', '#4fc3f7', '#ff8a65', '#ce93d8', '#80cbc4'];
+        for (let k = 0; k < 6; k++) {
+          ctx.fillStyle = stripCols[k];
+          ctx.fillRect(18 + k * 34, 114, 28, 12);
+        }
+        // Petits magnets ronds souriants
+        ['#a4d65e', '#f7dc6f', '#f4f6f7'].forEach((col, i) => {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(28 + i * 24, 98, 7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Carte postale colorée + petites vignettes blanches
+        ctx.fillStyle = '#6ec6ff';
+        ctx.fillRect(42, 138, 62, 54);
+        ctx.fillStyle = '#f4d03f';
+        ctx.fillRect(42, 168, 62, 24);
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(58, 154, 22, 18);
+
+        ctx.fillStyle = '#f8f8f5';
+        for (let r = 0; r < 3; r++) {
+          ctx.fillRect(22, 198 + r * 24, 24, 18);
+          ctx.fillRect(52, 198 + r * 24, 24, 18);
+          ctx.fillRect(126, 154 + r * 28, 30, 22);
+        }
+
+        // Grande feuille blanche de dessin enfant au milieu-bas de la porte haute
+        ctx.fillStyle = '#f5f4f0';
+        ctx.fillRect(16, 246, 166, 72);
+        ctx.fillStyle = '#d94854';
+        ctx.fillRect(92, 278, 22, 12);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
+      // Matériaux du Cellier
+      const whiteCabMat    = new THREE.MeshStandardMaterial({ color: 0xf4f2ec, roughness: 0.46, metalness: 0.02 });
+      const whiteAppMat    = new THREE.MeshStandardMaterial({ color: 0xf6f6f3, roughness: 0.34, metalness: 0.05 });
+      const wallColMat     = new THREE.MeshStandardMaterial({ color: 0xf2f1ed, roughness: 0.84 });
+      const oakTopMat      = new THREE.MeshStandardMaterial({ map: createCellierOakTexture(), roughness: 0.60 });
+      const inoxBodyMat    = new THREE.MeshStandardMaterial({ color: 0x5c636c, roughness: 0.34, metalness: 0.62 });
+      const inoxFrontMat   = new THREE.MeshStandardMaterial({ map: createFridgeFrontTexture(), roughness: 0.36, metalness: 0.46 });
+      const sinkSteelMat   = new THREE.MeshStandardMaterial({ color: 0xc4cbd3, roughness: 0.28, metalness: 0.80 });
+      const darkRimMat     = new THREE.MeshStandardMaterial({ color: 0x1c2026, roughness: 0.24, metalness: 0.45 });
+      const portholeGlass  = new THREE.MeshPhysicalMaterial({ color: 0x1e293b, roughness: 0.08, metalness: 0.35, clearcoat: 1.0 });
+      const darkMetalMat   = new THREE.MeshStandardMaterial({ color: 0x262a30, roughness: 0.48, metalness: 0.42 });
+      const towelMat       = new THREE.MeshStandardMaterial({ color: 0x9c826d, roughness: 0.92 });
+
+      // -----------------------------------------------------------------------
+      // 1. FRIGO-CONGÉLATEUR INOX FONCÉ + SÉCHOIR/TRÉTEAU PLIANT (u = 2,76..3,38)
+      // -----------------------------------------------------------------------
+      {
+        const frW = 0.60, frH = 1.86, frD = 0.61;
+        const frU = 3.06, frV = 4.48 + frD * 0.5;
+        const fridgeMats = [
+          inoxBodyMat, inoxBodyMat, inoxBodyMat, inoxBodyMat,
+          inoxFrontMat, // Face +Z locale === face +v donnant vers le cellier
+          inoxBodyMat
+        ];
+        addCelMesh(new THREE.BoxGeometry(frW, frH, frD), fridgeMats, frU, 0.008 + frH * 0.5, frV);
+
+        // Caisson haut assorti au-dessus du réfrigérateur (continuité des meubles hauts)
+        addCelMesh(new THREE.BoxGeometry(0.62, 0.40, 0.35), whiteCabMat, 3.07, 2.08, 4.65);
+
+        // Séchoir / portant vertical pliant blanc à raccords noirs glissé contre le bord droit du frigo
+        const rackU = 3.385, rackV = 5.04;
+        addCelMesh(new THREE.CylinderGeometry(0.011, 0.011, 1.66, 8), whiteAppMat, rackU, 0.84, rackV);
+        addCelMesh(new THREE.CylinderGeometry(0.011, 0.011, 1.66, 8), whiteAppMat, rackU, 0.84, rackV - 0.14);
+        addCelMesh(new THREE.BoxGeometry(0.026, 0.024, 0.16), darkMetalMat, rackU, 1.67, rackV - 0.07);
+        [0.48, 0.98, 1.46].forEach(ry => {
+          addCelMesh(new THREE.BoxGeometry(0.026, 0.032, 0.026), darkMetalMat, rackU, ry, rackV);
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // 2. PLAN DE TRAVAIL BOIS CHÊNE, LAVE-LINGE, SÈCHE-LINGE, SOUS-ÉVIER & ÉVIER INOX
+      // -----------------------------------------------------------------------
+      // Plan de travail continu bois chêne (u = 3,40..5,55, v = 4,47..5,10, y = 0,886)
+      addCelMesh(new THREE.BoxGeometry(2.15, 0.038, 0.63), oakTopMat, 4.475, 0.886, 4.785);
+
+      // 2a. Lave-linge hublot blanc style Samsung (u = 3,42..4,02, v = 4,49..5,06)
+      {
+        const wmU = 3.72, wmV = 4.775;
+        addCelMesh(new THREE.BoxGeometry(0.595, 0.848, 0.57), whiteAppMat, wmU, 0.432, wmV);
+        // Bandeau de commande supérieur (tiroir lessive gauche, molette centrale chromée, écran LED noir droite)
+        addCelMesh(new THREE.BoxGeometry(0.18, 0.11, 0.016), whiteCabMat,  wmU - 0.19, 0.785, wmV + 0.286);
+        addCelMesh(new THREE.CylinderGeometry(0.034, 0.036, 0.028, 16), darkRimMat, wmU, 0.785, wmV + 0.292, Math.PI / 2, 0, 0);
+        addCelMesh(new THREE.CylinderGeometry(0.028, 0.028, 0.032, 16), mat.chrome, wmU, 0.785, wmV + 0.293, Math.PI / 2, 0, 0);
+        addCelMesh(new THREE.BoxGeometry(0.17, 0.088, 0.014), darkRimMat,  wmU + 0.18, 0.785, wmV + 0.286);
+        // Grand hublot rond noir brillant cerclé avec reflet vitré
+        addCelMesh(new THREE.TorusGeometry(0.215, 0.032, 12, 28), darkRimMat, wmU, 0.42, wmV + 0.295);
+        addCelMesh(new THREE.TorusGeometry(0.236, 0.008, 8, 28), sinkSteelMat, wmU, 0.42, wmV + 0.292);
+        addCelMesh(new THREE.CylinderGeometry(0.195, 0.195, 0.026, 24), portholeGlass, wmU, 0.42, wmV + 0.295, Math.PI / 2, 0, 0);
+      }
+
+      // 2b. Second appareil blanc (sèche-linge / lave-vaisselle) à droite du lave-linge (u = 4,04..4,64)
+      {
+        const drU = 4.34, drV = 4.77;
+        addCelMesh(new THREE.BoxGeometry(0.595, 0.848, 0.56), whiteAppMat, drU, 0.432, drV);
+        // Panneau de porte + bandeau supérieur légèrement incliné + bouton/indicateurs
+        addCelMesh(new THREE.BoxGeometry(0.58, 0.65, 0.016), whiteCabMat, drU, 0.37, drV + 0.282);
+        addCelMesh(new THREE.BoxGeometry(0.58, 0.135, 0.022), whiteAppMat, drU, 0.785, drV + 0.280, -0.14, 0, 0);
+        addCelMesh(new THREE.BoxGeometry(0.14, 0.024, 0.014), darkMetalMat, drU, 0.74, drV + 0.294);
+        addCelMesh(new THREE.CylinderGeometry(0.018, 0.018, 0.018, 12), darkMetalMat, drU - 0.18, 0.79, drV + 0.292, Math.PI / 2, 0, 0);
+        // Petit torchon taupe plié accroché au bord droit
+        addCelMesh(new THREE.BoxGeometry(0.09, 0.26, 0.028), towelMat, drU + 0.29, 0.66, drV + 0.295, 0, 0, 0.05);
+      }
+
+      // 2c. Meuble bas blanc sous-évier jusqu'au mur garage (u = 4,66..5,55)
+      {
+        const cabU = 5.105, cabV = 4.76;
+        addCelMesh(new THREE.BoxGeometry(0.89, 0.77, 0.56), whiteCabMat, cabU, 0.478, cabV);
+        addCelMesh(new THREE.BoxGeometry(0.88, 0.09, 0.52), wallColMat, cabU, 0.053, cabV - 0.02); // Plinthe en retrait
+        // 2 portes blanches + poignées barres horizontales chromées
+        [-0.22, 0.22].forEach(du => {
+          addCelMesh(new THREE.BoxGeometry(0.436, 0.755, 0.018), whiteCabMat, cabU + du, 0.478, cabV + 0.284);
+          addCelMesh(new THREE.BoxGeometry(0.15, 0.012, 0.022), mat.chrome, cabU + du, 0.805, cabV + 0.302);
+        });
+      }
+
+      // 2d. Évier inox encastré + égouttoir + mitigeur col de cygne chrome + petits accessoires sur le plan
+      {
+        const sinkU = 5.08, sinkV = 4.78;
+        addCelMesh(new THREE.BoxGeometry(0.82, 0.012, 0.48), sinkSteelMat, sinkU, 0.909, sinkV);
+        addCelMesh(new THREE.CylinderGeometry(0.19, 0.17, 0.016, 22), darkRimMat, sinkU + 0.16, 0.911, sinkV); // Cuve ronde inox
+        for (let r = 0; r < 5; r++) {
+          addCelMesh(new THREE.BoxGeometry(0.32, 0.006, 0.010), darkMetalMat, sinkU - 0.20, 0.917, sinkV - 0.14 + r * 0.07);
+        }
+        // Mitigeur chrome orienté vers la cuve
+        addCelMesh(new THREE.CylinderGeometry(0.015, 0.020, 0.16, 10), mat.chrome, sinkU - 0.04, 0.99, sinkV - 0.14);
+        addCelMesh(new THREE.CylinderGeometry(0.011, 0.011, 0.19, 10), mat.chrome, sinkU + 0.04, 1.07, sinkV - 0.10, 0.30, 0, -1.25);
+        // Petit panier & pelle turquoise posés sur la gauche du plan de travail
+        addCelMesh(new THREE.BoxGeometry(0.18, 0.08, 0.22), darkMetalMat, 3.55, 0.945, 4.90);
+        addCelMesh(
+          new THREE.BoxGeometry(0.15, 0.022, 0.18),
+          new THREE.MeshStandardMaterial({ color: 0x269b9e, roughness: 0.55 }),
+          3.84, 0.922, 4.76, 0, 0.28, 0
+        );
+      }
+
+      // -----------------------------------------------------------------------
+      // 3. MEUBLES HAUTS BLANCS SUSPENDUS (u = 3,39..5,55, y = 1,54..2,28)
+      // -----------------------------------------------------------------------
+      {
+        const upW = 2.16, upH = 0.72, upD = 0.35;
+        const upU = 4.47, upV = 4.47 + upD * 0.5;
+        addCelMesh(new THREE.BoxGeometry(upW, upH, upD), whiteCabMat, upU, 1.91, upV);
+        addCelMesh(new THREE.BoxGeometry(upW, 0.018, upD - 0.01), oakTopMat, upU, 1.545, upV); // Finition basse chêne
+        // 4 portes blanches alignées avec poignées barres chromées en bas de porte
+        const doorW = upW / 4;
+        for (let k = 0; k < 4; k++) {
+          const du = 3.39 + (k + 0.5) * doorW;
+          addCelMesh(new THREE.BoxGeometry(doorW - 0.008, upH - 0.008, 0.018), whiteCabMat, du, 1.91, upV + upD * 0.5 + 0.006);
+          addCelMesh(new THREE.BoxGeometry(0.16, 0.012, 0.022), mat.chrome, du, 1.60, upV + upD * 0.5 + 0.024);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 4. COLONNE / PLACARD TECHNIQUE BLANC PLEINE HAUTEUR DANS L'ANGLE SUD-EST
+      //    (entre la fenêtre patio et la porte du garage : u = 4,36..5,54, v = 5,86..6,46)
+      // -----------------------------------------------------------------------
+      {
+        const colU = 4.95, colV = 6.16;
+        addCelMesh(new THREE.BoxGeometry(1.18, 2.48, 0.60), wallColMat, colU, 1.248, colV);
+        // Petit rebord/carton marron discret au sommet comme sur la photo
+        addCelMesh(
+          new THREE.BoxGeometry(0.28, 0.09, 0.24),
+          new THREE.MeshStandardMaterial({ color: 0xb08659, roughness: 0.85 }),
+          4.52, 2.45, 5.98
+        );
+        // Interrupteur blanc sur le mur du garage à gauche de la porte garage
+        addCelMesh(new THREE.BoxGeometry(0.012, 0.085, 0.085), whiteCabMat, 5.552, 1.15, 4.68);
+      }
+
+      // -----------------------------------------------------------------------
+      // 5. ASPIRATEUR BALAI DYSON (VIOLET & CUIVRE/ORANGE) SUR SON SUPPORT NOIR
+      //    Placé contre le mur de la fenêtre patio (z = 7,60, x = 14,32)
+      // -----------------------------------------------------------------------
+      {
+        const dysonGrp = new THREE.Group();
+        dysonGrp.position.set(14.32, 0.008, 7.42);
+        dysonGrp.rotation.y = Math.PI - 0.24; // Face à l'entrée du cellier
+        celGroup.add(dysonGrp);
+
+        const dysonPurpleMat = new THREE.MeshStandardMaterial({ color: 0x5d479a, roughness: 0.34, metalness: 0.32 });
+        const dysonCopperMat = new THREE.MeshStandardMaterial({ color: 0xc97b2c, roughness: 0.28, metalness: 0.66 });
+        const dysonRedMat    = new THREE.MeshStandardMaterial({ color: 0xd93838, roughness: 0.35 });
+        const dysonWandMat   = new THREE.MeshStandardMaterial({ color: 0x4c525c, roughness: 0.32, metalness: 0.72 });
+        const dysonBinMat    = new THREE.MeshPhysicalMaterial({
+          color: 0xd8e0e8, transparent: true, opacity: 0.48, roughness: 0.14, metalness: 0.10
+        });
+
+        // Support sur pied noir (socle + cadre tubulaire fin + petits embouts accrochés)
+        addCelMesh(new THREE.BoxGeometry(0.24, 0.016, 0.26), darkMetalMat, 0, 0.008, -0.02, 0, 0, 0, dysonGrp);
+        [-0.085, 0.085].forEach(sx => {
+          addCelMesh(new THREE.CylinderGeometry(0.009, 0.009, 1.24, 8), darkMetalMat, sx, 0.62, -0.10, 0, 0, 0, dysonGrp);
+        });
+        addCelMesh(new THREE.BoxGeometry(0.18, 0.018, 0.020), darkMetalMat, 0, 1.24, -0.10, 0, 0, 0, dysonGrp);
+        addCelMesh(new THREE.BoxGeometry(0.18, 0.10, 0.055), darkMetalMat, 0, 1.12, -0.08, 0, 0, 0, dysonGrp);
+
+        // Bloc moteur & filtre HEPA violet en haut + cyclone cuivre/orange + bouton rouge
+        addCelMesh(new THREE.CylinderGeometry(0.056, 0.058, 0.11, 16), dysonPurpleMat, 0, 1.14, 0.02, 0.08, 0, 0, dysonGrp);
+        addCelMesh(new THREE.CylinderGeometry(0.062, 0.072, 0.14, 16), dysonCopperMat, 0, 1.01, 0.03, 0.08, 0, 0, dysonGrp);
+        addCelMesh(new THREE.SphereGeometry(0.015, 10, 8), dysonRedMat, 0, 1.04, 0.095, 0, 0, 0, dysonGrp);
+        // Poignée arrière
+        addCelMesh(new THREE.BoxGeometry(0.032, 0.14, 0.08), darkMetalMat, 0, 0.96, -0.04, 0.18, 0, 0, dysonGrp);
+
+        // Collecteur transparent + tube métallique gris + brosse motorisée au sol
+        addCelMesh(new THREE.CylinderGeometry(0.062, 0.060, 0.20, 16), dysonBinMat, 0, 0.84, 0.04, 0.06, 0, 0, dysonGrp);
+        addCelMesh(new THREE.CylinderGeometry(0.032, 0.032, 0.18, 12), darkMetalMat, 0, 0.84, 0.04, 0.06, 0, 0, dysonGrp);
+        addCelMesh(new THREE.CylinderGeometry(0.019, 0.019, 0.66, 12), dysonWandMat, 0, 0.42, 0.05, 0.04, 0, 0, dysonGrp);
+        // Tête de brosse plate gris/violet au sol
+        addCelMesh(new THREE.BoxGeometry(0.24, 0.052, 0.11), darkMetalMat, 0, 0.038, 0.07, 0, 0, 0, dysonGrp);
+        addCelMesh(new THREE.CylinderGeometry(0.022, 0.022, 0.21, 12), dysonPurpleMat, 0, 0.035, 0.095, 0, 0, Math.PI / 2, dysonGrp);
+      }
+    }
+
+    buildCellierInterior();
 
     // =========================================================================
     // VÉHICULES TESLA DÉTAILLÉS :
